@@ -44,7 +44,7 @@ To install PatchSim using [PDM](https://pdm-project.org):
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/patchsim.git
+git clone https://github.com/dsih-artpark/patchsim
 cd patchsim
 
 # Install dependencies and lock the environment
