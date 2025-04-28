@@ -1,9 +1,9 @@
 # PatchSim
 
-![PatchSim Banner](assets/patchsim-banner.png)
-
 > ⚠️ **WARNING: Active Development**  
 > PatchSim is currently under **heavy development**. Features are experimental and subject to change. Not recommended for production use at this stage.
+
+![PatchSim Banner](assets/patchsim-banner.png)
 
 **PatchSim** is a modular metapopulation simulation framework for multi-disease epidemiological modelling.
 
@@ -50,7 +50,7 @@ cd patchsim
 # Install dependencies and lock the environment
 pdm install
 
-
+```
 ## Contributing
 
 We welcome contributions!
