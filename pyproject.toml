@@ -1,0 +1,52 @@
+[project]
+name = "patchsim"
+version = "0.1.0"
+description = "A modular simulation framework for patch-based metapopulation epidemiology"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "GPL-3.0"}
+
+dependencies = [
+    "numpy",
+    "pandas",
+    "scipy",
+    "matplotlib",
+    "pyyaml",
+    "tqdm",
+    "networkx",
+    "SALib",
+]
+authors = [
+    {name = "Adish Assain", email = "adish@artpark.in"},
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.5",
+    "ruff",
+    "mypy",
+    "pytest-cov",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.12",
+    "mkdocstrings[python]>=0.29.1",
+]
+
+notebook = [
+    "jupyter",
+    "seaborn",
+    "plotly",
+    "ipywidgets",
+]
+
+[project.scripts]
+patchsim = "patchsim.cli:main"
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+[tool.pdm]
+distribution = true
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
