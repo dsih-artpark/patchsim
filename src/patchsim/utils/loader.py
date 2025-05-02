@@ -8,6 +8,7 @@ from typing import List, Dict
 
 logger = setup_logger()
 
+
 def read_config(config_path: str) -> Dict[str, str]:
     """
     Read and parse a YAML configuration file.
@@ -26,6 +27,7 @@ def read_config(config_path: str) -> Dict[str, str]:
     except Exception as e:
         logger.error(f"Failed to read configuration file '{config_path}': {e}")
         raise
+
 
 def read_patch_population(file_path: str) -> List[Dict[str, int]]:
     """
@@ -51,6 +53,7 @@ def read_patch_population(file_path: str) -> List[Dict[str, int]]:
         logger.error(f"Failed to read patch population file '{file_path}': {e}")
         raise
     return patches
+
 
 def read_network(file_path: str) -> List[Dict[str, float]]:
     """
@@ -80,6 +83,7 @@ def read_network(file_path: str) -> List[Dict[str, float]]:
         logger.error(f"Failed to read network file '{file_path}': {e}")
         raise
     return network
+
 
 def read_seeding_infection(
     file_path: str, *, start_date: datetime, end_date: datetime
@@ -116,6 +120,7 @@ def read_seeding_infection(
         raise
     return seeds
 
+
 def apply_seeding_infections(
     patches: List[Dict[str, int]], seeds: List[Dict[str, str]], *, current_date: datetime
 ) -> List[Dict[str, int]]:
@@ -140,6 +145,7 @@ def apply_seeding_infections(
                     patch["S0"] = max(0, patch["N0"] - patch["I0"])  # Update susceptibles
     logger.info(f"Seeding infections applied for date {current_date}.")
     return patches
+
 
 def set_random_seed(*, seed: int) -> None:
     """

@@ -1,0 +1,16 @@
+# Input files
+PatchFile: data/patch/sample-sir-ode-patch-population.csv
+NetworkFile: data/networks/sample-network-static.csv
+SeedFile: data/seeds/sample-sir-ode-patchA-2.csv
+Logging: False
+
+# Simulation parameters
+Beta: 0.3
+Gamma: 0.1
+TMax: 50
+Tolerance: 1e-8
+MaxIter: 10000
+StartDate: 2020-01-01
+EndDate: 2022-12-31
+OutputDir: output/sample-sir-ode
+

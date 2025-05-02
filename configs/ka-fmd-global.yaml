@@ -1,0 +1,20 @@
+# Input files
+PatchFile: data/patch/ka-livestock-population-district.csv
+NetworkFile: data/networks/ka-livestock-exponential-dispersal-static.csv
+SeedFile: data/seeds/ka-fmd-20200101-blr-200.csv
+Logging: True
+
+# Simulation parameters
+Tolerance: 1e-8
+MaxIter: 10000
+StartDate: 2020-01-01
+EndDate: 2022-12-31
+
+# Model parameters
+InfectionRate: 0.125
+RecoveryRate: 0.0714
+WeibullShapeVax: 3
+WeibullScaleVax: 200
+WeibullShapeRec: 3
+WeibullScaleRec: 600
+
