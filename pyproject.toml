@@ -18,6 +18,7 @@ dependencies = [
 ]
 authors = [
     {name = "Adish Assain", email = "adish@artpark.in"},
+    {name = "Sneha S", email = "sneha@artpark.in"}
 ]
 
 [project.optional-dependencies]
@@ -44,9 +45,6 @@ patchsim = "patchsim.cli:main"
 [tool.ruff]
 line-length = 88
 target-version = "py39"
-[tool.pdm]
-distribution = true
 
-[build-system]
-requires = ["pdm-backend"]
-build-backend = "pdm.backend"
+[tool.uv]
+package = true

@@ -50,7 +50,11 @@ cd patchsim
 # Install dependencies and lock the environment
 pdm install
 
-```
+## Environment Setup
+
+The project was initially set up in PDM, but is now migrating to UV. PDM usage has been deprecated.
+
+
 ## Contributing
 
 We welcome contributions!
