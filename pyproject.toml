@@ -42,11 +42,16 @@ notebook = [
 patchsim = "patchsim.cli:main"
 
 [tool.ruff]
-line-length = 88
+line-length = 120
 target-version = "py39"
-[tool.pdm]
-distribution = true
+select = ["E", "F", "W", "I", "FLY", "RUF", "B", "ICN"]
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.isort]
+known-first-party = ["patchsim"]
+
 
 [build-system]
-requires = ["pdm-backend"]
-build-backend = "pdm.backend"
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"

@@ -1,0 +1,18 @@
+site_name: PatchSim
+theme:
+  name: material
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: ["src/patchsim"]
+
+nav:
+  - Home: index.md
+  - Reference:
+      - Core: reference/core.md
+      - Models: reference/models.md
+      - Utils: reference/utils.md

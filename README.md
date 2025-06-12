@@ -40,17 +40,78 @@ PatchSim aims to support a range of modelling features commonly used in metapopu
 
 ## Installation
 
-To install PatchSim using [PDM](https://pdm-project.org):
+To install PatchSim using [uv](https://github.com/astral-sh/uv):
 
 ```bash
 # Clone the repository
 git clone https://github.com/dsih-artpark/patchsim
 cd patchsim
 
-# Install dependencies and lock the environment
-pdm install
+# Create a virtual environment and install dependencies
+uv venv
+source .venv/bin/activate
+uv pip install -e .
 
+# For development (with dev dependencies)
+uv pip install -e .[dev]
 ```
+
+---
+
+## Usage
+
+### Command Line Interface
+
+PatchSim provides a command-line interface for running simulations:
+
+```bash
+# Show help and available options
+patchsim --help
+
+# Run simulation with sample SIR model
+patchsim --config configs/sample-sir-ode.yaml
+
+# Run simulation with custom model
+patchsim --config path/to/your/config.yaml
+```
+
+The simulation outputs are saved in the following structure:
+```
+output/
+├── logs/
+│   └── cli_YYYYMMDD_HHMMSS.log  # Timestamped log files
+└── sample-sir-ode/              # Model-specific output directory
+    ├── plots/
+    │   └── patch_timeseries_sample-sir-ode_ode.png
+    └── runs/
+        └── all_patches_sample-sir-ode_ode.csv
+```
+
+### Configuration
+
+Simulations are configured using YAML files. The configuration file specifies:
+- Model parameters (e.g., transmission rates)
+- Input files (patch populations, seed data, network)
+- Simulation settings (time horizon, output directory)
+
+Example configuration:
+```yaml
+# Model parameters
+Beta: 0.3
+Gamma: 0.1
+
+# Input files
+PatchFile: data/patch/sample-sir-ode-patch-population.csv
+SeedFile: data/seeds/sample-sir-ode-patchA-2.csv
+NetworkFile: data/networks/sample-network-static.csv
+
+# Simulation settings
+OutputDir: output/sample-sir-ode
+TMax: 50
+```
+
+---
+
 ## Contributing
 
 We welcome contributions!

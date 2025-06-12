@@ -4,6 +4,7 @@ import platform
 import sys
 from datetime import datetime
 
+
 def setup_logger(model_name, config, num_patches, patches, base_model):
     """
     Set up a logger to log messages to a file and the console, and log system/run details.
@@ -45,5 +46,13 @@ def setup_logger(model_name, config, num_patches, patches, base_model):
     logger.info(f"TMax: {config['TMax']}")
     logger.info(f"Num patches: {num_patches}")
     logger.info(f"Patch list: {patches}")
-    logger.info(f"Base model: compartments={base_model.compartments}, transitions={base_model.transitions}, parameters={base_model.parameters}")
+    logger.info(
+        f"Base model: compartments={base_model.compartments}, "
+        f"transitions={base_model.transitions}, "
+        f"parameters={base_model.parameters}"
+    )
+    logger.info(
+        f"Simulation started: model={model_name}, num_patches={num_patches}, patches={patches}, "
+        f"transitions={base_model.transitions}, parameters={base_model.parameters}"
+    )
     return logger

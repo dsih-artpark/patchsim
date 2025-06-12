@@ -1,6 +1,8 @@
-import matplotlib.pyplot as plt
-import os
 import math
+import os
+
+import matplotlib.pyplot as plt
+
 
 def plot_patch_subplots(t_range, out_ode, patches, output_dir, model_name):
     """
