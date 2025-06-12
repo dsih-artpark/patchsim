@@ -6,4 +6,4 @@ This module contains standard epidemiological models implemented in PatchSim.
 
 A basic susceptible-infected-recovered (SIR) model implemented using ordinary differential equations (ODEs).
 
-::: patchsim.models.sample-sir-ode
+::: patchsim.models.sample_sir_ode
