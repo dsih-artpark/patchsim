@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+*.vscode
+
 # C extensions
 *.so
 
@@ -148,6 +150,7 @@ dmypy.json
 *.csv
 *.txt
 *.xlsx
+output/**
 
 # Additions for GeoJSON, .zip files, and shapefiles
 *.geojson
