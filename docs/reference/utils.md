@@ -11,7 +11,7 @@ Also includes random seed initialisation utilities.
 
 ## Logger
 
-Provides a logging setup for the project.
+Provides a logging setup for the simulation runs.
 
 ::: patchsim.utils.logger
 
