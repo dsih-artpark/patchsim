@@ -4,13 +4,17 @@ NetworkFile: data/networks/sample-network-static.csv
 SeedFile: data/seeds/sample-sir-ode-patchA-2.csv
 Logging: False
 
+# Model configuration
+ModelName: sample-sir-ode
+
 # Simulation parameters
-Beta: 0.3
-Gamma: 0.1
 TMax: 50
 Tolerance: 1e-8
 MaxIter: 10000
 StartDate: 2020-01-01
 EndDate: 2022-12-31
 OutputDir: output/sample-sir-ode
+compartments: ["S", "I", "R"]
+Parameters: {"beta": 0.5, "gamma": 0.1}
+Transitions: [{"from": "S", "to": "I", "rate": "beta * S * I / (S + I + R)"}, {"from": "I", "to": "R", "rate": "gamma * I"}]
 

@@ -16,10 +16,10 @@ logger = setup_logger()
 
 def read_config(config_path: str) -> dict[str, str]:
     """Read and parse a YAML configuration file.
-    
+
     Args:
         config_path: Path to the YAML configuration file
-    
+
     Returns:
         Dictionary containing configuration parameters
     """
