@@ -15,6 +15,7 @@ dependencies = [
     "tqdm",
     "networkx",
     "SALib",
+    "pytest>=8.4.0",
 ]
 authors = [
     {name = "Adish Assain", email = "adish@artpark.in"},
