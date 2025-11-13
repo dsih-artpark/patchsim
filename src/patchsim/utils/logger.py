@@ -32,6 +32,15 @@ def setup_logger(model_name, config, num_patches, patches, base_model):
     logger.info(f"Python version: {sys.version}")
     logger.info(f"Platform: {platform.platform()}")
     logger.info(f"Parameters: {base_model.parameters}")
+    # log per-patch parameters if defined
+    if "PatchParameters" in config:
+        logger.info("Per-patch parameter overrides detected:")
+        for entry in config["PatchParameters"]:
+            patch = entry["patch"]
+            params = entry.get("parameters", {})
+            logger.info(f"  {patch}: {params}")
+    else:
+        logger.info("No per-patch parameter overrides provided.")
     # Parameter agnostic positivity check
     for param, value in base_model.parameters.items():
         try:
