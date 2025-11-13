@@ -88,7 +88,19 @@ class NetworkModel:
             patch_state = self.get_patch_state(state, i)
 
             # Get rates for this patch
+            if hasattr(self, "patch_parameters"):
+                # get patch name using index (like PatchA, PatchB, etc.)
+                patch_names = list(self.patch_parameters.keys())
+                patch_name = patch_names[i] if i < len(patch_names) else None
+                patch_params = self.patch_parameters.get(patch_name, self.base_model.parameters)
+            else:
+                patch_params = self.base_model.parameters
+
+            # Temporarily override parameters for this patch
+            old_params = self.base_model.parameters
+            self.base_model.parameters = patch_params
             rates = self.base_model.compute_rates(patch_state)
+            self.base_model.parameters = old_params  # restore global parameters
 
             # Update derivatives based on rates
             for transition in self.base_model.transitions:

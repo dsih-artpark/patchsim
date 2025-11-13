@@ -76,14 +76,28 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
             network_matrix[i, j] = row['weight']
 
     # Set up model
-    parameters = config.get('Parameters', {})
+    global_params = config.get('Parameters', {})
     transitions = config.get('Transitions', [])
     if not transitions:
         raise ValueError("No transitions defined in config")
 
+    # Collect per-patch parameters if provided
+    patch_params = {}
+    if 'PatchParameters' in config:
+        for entry in config['PatchParameters']:
+            patch_name = entry['patch']
+            patch_params[patch_name] = entry.get('parameters', {})
+
+    # Validate patch parameter entries
+    for p in patches:
+        if p not in patch_params:
+            # fallback: use global params if not defined for this patch
+            patch_params[p] = global_params.copy()
+
+    # Initialize the base model (will hold default/global transitions)
     base_model = CompartmentalModel(
         compartments=compartments,
-        parameters=parameters,
+        parameters=global_params,
         transitions=transitions
     )
 
@@ -97,7 +111,11 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
     # Create network model
     net = NetworkModel(base_model=base_model, num_patches=num_patches, network_matrix=network_matrix)
 
+    # Attach per-patch parameters to the network model
+    net.patch_parameters = patch_params
+    
     return net, y0, patches, num_patches
+
 
 
 def run_simulation(
