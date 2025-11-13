@@ -4,7 +4,7 @@ import os
 import matplotlib.pyplot as plt
 
 
-def plot_patch_subplots(t_range, out_ode, patches, output_dir, model_name):
+def plot_patch_subplots(t_range, out_ode, patches, output_dir, model_name, patch_parameters=None):
     """
     Plots all patches as subplots in a single figure and saves the figure.
     """
@@ -17,7 +17,12 @@ def plot_patch_subplots(t_range, out_ode, patches, output_dir, model_name):
         ax = axes[i]
         for c in ["S", "I", "R"]:
             ax.plot(t_range, out_ode[f"{c}_{i}"], label=c)
-        ax.set_title(f"Patch {patch} (ODE)")
+        title = f"Patch {patch} (ODE)"
+        if patch_parameters and patch in patch_parameters:
+            params = patch_parameters[patch]
+            param_str = ", ".join(f"{k}={v}" for k, v in params.items())
+            title += f"\n({param_str})"
+        ax.set_title(title)
         ax.set_xlabel("Time")
         ax.set_ylabel("Count")
         ax.legend()
@@ -30,3 +35,13 @@ def plot_patch_subplots(t_range, out_ode, patches, output_dir, model_name):
     plt.close()
 
 
+        
+           
+
+       
+        
+       
+        
+    
+
+    

@@ -152,5 +152,5 @@ def run_simulation(
     out_df.to_csv(csv_path, index=False)
     logger.info(f"Saved simulation output to {csv_path}")
 
-    plot_patch_subplots(t_range, out_ode, patches, plots_dir, model_name)
+    plot_patch_subplots(t_range, out_ode, patches, plots_dir, model_name, patch_parameters=getattr(net, "patch_parameters", None))
     logger.info(f"Saved all patch subplots to {plots_dir}/patch_timeseries_{model_name}_ode.png")
