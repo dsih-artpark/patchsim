@@ -1,0 +1,5 @@
+source,target,day,weight
+"A","A",0,0.9
+"A","B",0,0.1
+"B","B",0,0.9
+"B","A",0,0.1
