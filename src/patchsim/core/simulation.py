@@ -5,18 +5,15 @@ ODE and discrete simulation logic is implemented in core/model.py.
 
 import os
 from typing import Any
-
 import numpy as np
 import pandas as pd
 import yaml
 from scipy.integrate import odeint
-
 from patchsim.core.model import CompartmentalModel, NetworkModel
 from patchsim.utils.logger import setup_logger
 from patchsim.utils.viz import plot_patch_subplots
 
 EPSILON = 1e-6
-
 
 def load_config(config_path: str) -> dict[str, Any]:
     """Load and validate configuration file."""
@@ -152,5 +149,5 @@ def run_simulation(
     out_df.to_csv(csv_path, index=False)
     logger.info(f"Saved simulation output to {csv_path}")
 
-    plot_patch_subplots(t_range, out_ode, patches, plots_dir, model_name, patch_parameters=getattr(net, "patch_parameters", None))
+    plot_patch_subplots(t_range, out_ode, patches, plots_dir, model_name)
     logger.info(f"Saved all patch subplots to {plots_dir}/patch_timeseries_{model_name}_ode.png")

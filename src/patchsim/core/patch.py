@@ -1,68 +1,54 @@
-from typing import List, Dict
+
+from typing import Dict, Any
 
 class Patch:
-    """
-    Represents a single patch within a multi-patch epidemiological model.
-    Stores population, compartments, parameters, transitions, and initial conditions.
-    Provides built-in validation to guarantee model integrity.
-    """
     def __init__(
         self,
-        id: int,
+        patch_id: int,
         name: str,
         population: float,
-        compartments: List[str],
-        params: Dict,
-        initial_conditions: Dict[str, float],
-        transitions: List[Dict]
+        compartments: Dict[str, float],
+        parameters: Dict[str, float],
+        transitions: list[Dict[str, Any]],
     ):
-        self.id = id
+        self.id = patch_id
         self.name = name
         self.population = population
         self.compartments = compartments
-        self.params = params
-        self.initial_conditions = initial_conditions
+        self.parameters = parameters
         self.transitions = transitions
 
         self.validate()
 
-    def validate(self):
-        """Validate all patch attributes."""
-        # Population must be positive
+    def validate(self) -> None:
         if self.population <= 0:
-            raise ValueError(f"Patch {self.name}: population must be positive.")
-        # Compartments must be a non-empty list
-        if not isinstance(self.compartments, list) or len(self.compartments) == 0:
-            raise ValueError(f"Patch {self.name}: compartments must be a non-empty list.")
-        # Initial conditions provided for all compartments
-        for c in self.compartments:
-            if c not in self.initial_conditions:
-                raise ValueError(
-                    f"Patch {self.name}: missing initial condition for compartment '{c}'."
-                )
-            if self.initial_conditions[c] < 0:
-                raise ValueError(
-                    f"Patch {self.name}: negative initial value for compartment '{c}'."
-                )
-        # Sum of initial conditions must match population
-        total = sum(self.initial_conditions[c] for c in self.compartments)
+            raise ValueError(f"Patch {self.name}: population must be positive")
+
+        if any(v < 0 for v in self.compartments.values()):
+            raise ValueError(f"Patch {self.name}: negative compartment value")
+
+        total = sum(self.compartments.values())
         if abs(total - self.population) > 1e-6:
             raise ValueError(
-                f"Patch {self.name}: initial conditions sum to {total}, "
-                f"but population is {self.population}."
+                f"Patch {self.name}: compartments do not sum to population"
             )
-        # Transition checks
-        for tr in self.transitions:
-            if "from" not in tr or "to" not in tr or "rate" not in tr:
-                raise ValueError(f"Patch {self.name}: invalid transition {tr}")
 
-            if tr["from"] not in self.compartments or tr["to"] not in self.compartments:
+        for t in self.transitions:
+            if t["from"] not in self.compartments or t["to"] not in self.compartments:
                 raise ValueError(
-                    f"Patch {self.name}: transition {tr['from']}→{tr['to']} "
-                    "uses compartments that are not defined."
+                    f"Patch {self.name}: invalid transition {t}"
                 )
-        return True
-    
-    def get_initial_compartment_vector(self):
-        """Return a vector [S, I, R, ...] preserving compartment order."""
-        return [self.initial_conditions[c] for c in self.compartments]
+
+    def compute_transition_rates(self) -> Dict[str, float]:
+        rates = {}
+        for t in self.transitions:
+            expr = t["rate"]
+            if isinstance(expr, str):
+                local = {**self.parameters, **self.compartments}
+                rate_value = eval(expr, {}, local)
+            else:
+                rate_value = float(expr)
+
+            rates[f"{t['from']}_to_{t['to']}"] = rate_value
+
+        return rates
