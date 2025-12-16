@@ -1,8 +1,9 @@
 """
 Core model implementation for compartmental models.
 """
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, List
 from scipy.integrate import odeint
+import numpy as np
 
 class CompartmentalModel:
     """Base class for compartmental models."""
@@ -143,3 +144,4 @@ class NetworkModel:
         sol = integrator(rhs, y0, t_range)
         out = {c: sol[:, i] for i, c in enumerate(self.all_compartments)}
         return t_range, out
+    

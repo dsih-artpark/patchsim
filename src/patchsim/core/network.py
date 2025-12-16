@@ -1,43 +1,55 @@
+from typing import List, Dict
 import numpy as np
-from typing import Dict
+
 from patchsim.core.patch import Patch
 
-
 class Network:
-    def __init__(self, patches: list[Patch], adjacency: np.ndarray):
+    def __init__(self, patches: List[Patch], adjacency: np.ndarray):
+        """
+        patches: list of Patch objects
+        adjacency: num_patches x num_patches matrix with infection weights
+                   adjacency[i,j] = influence of patch j on patch i
+        """
         self.patches = patches
-        self.adjacency = adjacency
+        self.adj = adjacency
         self.num_patches = len(patches)
 
-        self.validate()
-
-    def validate(self):
-        if self.adjacency.shape != (self.num_patches, self.num_patches):
-            raise ValueError("Adjacency matrix dimension mismatch")
-
-    def get_state_vector(self) -> Dict[str, float]:
+    def get_full_state(self) -> Dict[str, float]:
+        """Flatten all patch states into a dict with keys 'Compartment_i'."""
         state = {}
         for p in self.patches:
-            for c, v in p.compartments.items():
-                state[f"{c}_{p.id}"] = v
+            for c in p.compartments:
+                state[f"{c}_{p.id}"] = p.state[c]
         return state
 
+    def compute_force_of_infection(self, infected_comp: str = "I") -> List[float]:
+        """Compute lambda_i for each patch i considering other patches."""
+        lambdas = []
+        for i, patch_i in enumerate(self.patches):
+            force = 0.0
+            for j, patch_j in enumerate(self.patches):
+                if patch_j.population > 0:
+                    force += self.adj[i, j] * patch_j.state[infected_comp] / patch_j.population
+            lambdas.append(force)
+        return lambdas
+
     def compute_derivatives(self) -> Dict[str, float]:
-        derivatives = {}
+        """Compute dX/dt for all patches using transitions + network force of infection."""
+        derivs = {}
+        full_state = self.get_full_state()
+        lambdas = self.compute_force_of_infection()
+        for idx, patch in enumerate(self.patches):
+            rates = patch.compute_transition_rates()
+            for t in patch.transitions:
+                s = t['from']
+                r = t['to']
+                key = f"{s}_to_{r}"
+                rate = rates[key]
 
-        for p in self.patches:
-            rates = p.compute_transition_rates()
+                # If this is an infection transition, scale by network force
+                if s == "S" and r == "I":
+                    rate = lambdas[idx] * patch.state[s]
 
-            for t in p.transitions:
-                src = t["from"]
-                tgt = t["to"]
-                rate = rates[f"{src}_to_{tgt}"]
-
-                derivatives[f"{src}_{p.id}"] = (
-                    derivatives.get(f"{src}_{p.id}", 0) - rate
-                )
-                derivatives[f"{tgt}_{p.id}"] = (
-                    derivatives.get(f"{tgt}_{p.id}", 0) + rate
-                )
-
-        return derivatives
+                derivs[f"{s}_{patch.id}"] = derivs.get(f"{s}_{patch.id}", 0) - rate
+                derivs[f"{r}_{patch.id}"] = derivs.get(f"{r}_{patch.id}", 0) + rate
+        return derivs
