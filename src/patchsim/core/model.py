@@ -90,7 +90,12 @@ class NetworkModel:
                 # get patch name using index (like PatchA, PatchB, etc.)
                 patch_names = list(self.patch_parameters.keys())
                 patch_name = patch_names[i] if i < len(patch_names) else None
-                patch_params = self.patch_parameters.get(patch_name, self.base_model.parameters)
+                patch_params = {
+                    **self.base_model.parameters,
+                    **self.patch_parameters.get(patch_name, {})
+                }
+
+                #patch_params = self.patch_parameters.get(patch_name, self.base_model.parameters)
             else:
                 patch_params = self.base_model.parameters
 

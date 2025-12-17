@@ -12,6 +12,7 @@ from scipy.integrate import odeint
 from patchsim.core.model import CompartmentalModel, NetworkModel
 from patchsim.utils.logger import setup_logger
 from patchsim.utils.viz import plot_patch_subplots
+from patchsim.core.model_runner import Model
 
 EPSILON = 1e-6
 
@@ -89,7 +90,12 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
     for p in patches:
         if p not in patch_params:
             # fallback: use global params if not defined for this patch
-            patch_params[p] = global_params.copy()
+            #patch_params[p] = global_params.copy()
+            patch_params[p] = {
+                **global_params,
+                **patch_params.get(p, {})
+            }
+
 
     # Initialize the base model (will hold default/global transitions)
     base_model = CompartmentalModel(
@@ -137,7 +143,9 @@ def run_simulation(
 
     # Run simulation
     t_range = np.linspace(0, config['TMax']-1, int(config['TMax']))
-    _, out_ode = net.simulate_ode(y0, t_range, odeint)
+    model = Model(net, compartments=list(net.base_model.compartments))
+    out_ode = model.solve(y0, t_range)
+
 
     # Save results
     out_df = pd.DataFrame(out_ode)
@@ -149,5 +157,7 @@ def run_simulation(
     out_df.to_csv(csv_path, index=False)
     logger.info(f"Saved simulation output to {csv_path}")
 
-    plot_patch_subplots(t_range, out_ode, patches, plots_dir, model_name)
+    #plot_patch_subplots(t_range, out_ode, patches, plots_dir, model_name)
+    model.visualize(t_range, out_ode, patches, plots_dir, model_name)
+
     logger.info(f"Saved all patch subplots to {plots_dir}/patch_timeseries_{model_name}_ode.png")

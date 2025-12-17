@@ -1,49 +1,55 @@
 import numpy as np
 from scipy.integrate import odeint
-from patchsim.core.network import Network
-from patchsim.utils.viz import plot_patch_subplots
 
 class Model:
-    def __init__(self, network: Network):
-        self.network = network
-        self.results = None
-        self.t_range = None
-    
+    """
+    High-level simulation model.
+    Owns the Network and builds/solves the ODE.
+    """
+
+    def __init__(self, network_model, compartments):
+        self.network = network_model
+        self.compartments = compartments
+        self.all_vars = self.network.all_compartments
+
     def construct_ode(self):
-        all_vars = []
-        for p in self.network.patches:
-            for c in p.compartments:
-                all_vars.append(f"{c}_{p.id}")
         def rhs(y, t):
-            idx = {name: i for i, name in enumerate(all_vars)}
+            state = {v: y[i] for i, v in enumerate(self.all_vars)}
+            dydt = {v: 0.0 for v in self.all_vars}
 
-            # update patch compartments
-            for p in self.network.patches:
-                for c in p.compartments:
-                    p.compartments[c] = y[idx[f"{c}_{p.id}"]]
+            # network infection term
+            lambdas = self.network.compute_force_of_infection(state)
+            beta = self.network.base_model.parameters["beta"]
 
-            derivs = self.network.compute_derivatives()
-            return [derivs.get(v, 0.0) for v in all_vars]
-        return rhs, all_vars
+            for i in range(self.network.num_patches):
+                S = state[f"S_{i}"]
+                infection = beta * S * lambdas[i]
+                dydt[f"S_{i}"] -= infection
+                dydt[f"I_{i}"] += infection
 
-    def solve(self, t_range):
-        rhs, variables = self.construct_ode()
-        self.t_range = t_range
+            # local transitions
+            for i in range(self.network.num_patches):
+                patch_state = {
+                    c: state[f"{c}_{i}"] for c in self.compartments
+                }
 
-        y0 = []
-        for p in self.network.patches:
-            for c in p.compartments:
-                y0.append(p.compartments[c])
+                rates = self.network.base_model.compute_rates(patch_state)
 
-        sol = odeint(rhs, y0, t_range)
-        self.results = {variables[i]: sol[:, i] for i in range(len(variables))}
-        return self.results
+                for key, rate in rates.items():
+                    src, tgt = key.split("_to_")
+                    dydt[f"{src}_{i}"] -= rate
+                    dydt[f"{tgt}_{i}"] += rate
 
-    def visualize(self, output_dir: str, model_name: str):
-        if self.results is None:
-            raise RuntimeError("Run solve() before visualize()")
+            return [dydt[v] for v in self.all_vars]
 
-        patch_names = [p.name for p in self.network.patches]
-        plot_patch_subplots(
-            self.t_range, self.results, patch_names, output_dir, model_name
-        )
+        return rhs
+
+    def solve(self, y0, t_range):
+        rhs = self.construct_ode()
+        y0_vec = [y0[v] for v in self.all_vars]
+        sol = odeint(rhs, y0_vec, t_range)
+        return {v: sol[:, i] for i, v in enumerate(self.all_vars)}
+
+    def visualize(self, t, results, patches, outdir, model_name):
+        from patchsim.utils.viz import plot_patch_subplots
+        plot_patch_subplots(t, results, patches, outdir, model_name)
