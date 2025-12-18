@@ -45,11 +45,9 @@ class Network:
                 r = t['to']
                 key = f"{s}_to_{r}"
                 rate = rates[key]
-
                 # If this is an infection transition, scale by network force
                 if s == "S" and r == "I":
                     rate = lambdas[idx] * patch.state[s]
-
                 derivs[f"{s}_{patch.id}"] = derivs.get(f"{s}_{patch.id}", 0) - rate
                 derivs[f"{r}_{patch.id}"] = derivs.get(f"{r}_{patch.id}", 0) + rate
         return derivs
