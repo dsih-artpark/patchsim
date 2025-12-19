@@ -165,3 +165,14 @@ output/**
 
 # Exception for .png files in assets/
 !assets/*.png
+
+# Allow tracked data CSVs
+!data/
+!data/networks/
+!data/networks/*.csv
+
+!data/patch/
+!data/patch/*.csv
+
+!data/seeds/
+!data/seeds/*.csv
