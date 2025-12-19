@@ -1,0 +1,5 @@
+day,source,target,weight
+0,A,A,0.99
+0,A,B,0.01
+0,B,B,0.995
+0,B,A,0.005
