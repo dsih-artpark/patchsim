@@ -19,4 +19,4 @@ Parameters:
   beta: 0.2
   gamma: 0.1
 #PatchParameters: [{"patch": "PatchA", "parameters": {"beta": 0.2, "gamma": 0.1}}, {"patch": "PatchB", "parameters": {"beta": 0.25, "gamma": 0.1}}]
-Transitions: [{"from": "S", "to": "I", "rate": "beta * S * I / (S + I + R)"}, {"from": "I", "to": "R", "rate": "gamma * I"}]
+Transitions: [{"from": "S", "to": "I", "rate": "beta"}, {"from": "I", "to": "R", "rate": "gamma * I"}]
