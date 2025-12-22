@@ -39,15 +39,13 @@ class Network:
         full_state = self.get_full_state()
         lambdas = self.compute_force_of_infection()
         for idx, patch in enumerate(self.patches):
-            rates = patch.compute_transition_rates()
+            # Pass network force of infection to patch for S->I transitions
+            rates = patch.compute_transition_rates(force_of_infection=lambdas[idx])
             for t in patch.transitions:
                 s = t['from']
                 r = t['to']
                 key = f"{s}_to_{r}"
                 rate = rates[key]
-                # If this is an infection transition, scale by network force
-                if s == "S" and r == "I":
-                    rate = lambdas[idx] * patch.state[s]
                 derivs[f"{s}_{patch.id}"] = derivs.get(f"{s}_{patch.id}", 0) - rate
                 derivs[f"{r}_{patch.id}"] = derivs.get(f"{r}_{patch.id}", 0) + rate
         return derivs

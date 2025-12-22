@@ -29,20 +29,37 @@ class Patch:
         if any(self.state[c] < 0 for c in self.compartments):
             raise ValueError(f"Patch {self.name}: negative compartment values detected")
 
-    def compute_transition_rates(self):
+    def compute_transition_rates(self, force_of_infection=None):
+        """
+        Compute transition rates for all transitions in this patch.
+        
+        Args:
+            force_of_infection: optional network-based force of infection (lambda) 
+                               applied to S->I transitions. If None, uses local parameters.
+        
+        Returns:
+            Dictionary with transition rates as values
+        """
         rates = {}
         for t in self.transitions:
             source = t['from']
             target = t['to']
             rate_expr = t['rate']
-            # Replace parameters and compartment values
-            if isinstance(rate_expr, str):
-                for p, v in self.parameters.items():
-                    rate_expr = rate_expr.replace(p, str(v))
-                for c, v in self.state.items():
-                    rate_expr = rate_expr.replace(c, str(v))
-                rate_val = eval(rate_expr)
+            
+            # If S->I transition and network force provided, use it
+            if source == "S" and target == "I" and force_of_infection is not None:
+                rate_val = force_of_infection * self.state[source]
             else:
-                rate_val = rate_expr
-            rates[f"{source}_to_{target}"] = rate_val * self.state[source]
+                # Replace parameters and compartment values
+                if isinstance(rate_expr, str):
+                    for p, v in self.parameters.items():
+                        rate_expr = rate_expr.replace(p, str(v))
+                    for c, v in self.state.items():
+                        rate_expr = rate_expr.replace(c, str(v))
+                    rate_val = eval(rate_expr)
+                else:
+                    rate_val = rate_expr
+                rate_val = rate_val * self.state[source]
+            
+            rates[f"{source}_to_{target}"] = rate_val
         return rates
