@@ -76,6 +76,24 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
     # Set up model
     global_params = config.get('Parameters', {})
     transitions = config.get('Transitions', [])
+    # Normalize transitions: support both list-of-dicts and arrow-map syntax
+    # Example arrow-map:
+    # Transitions:
+    #   S -> I: beta
+    #   I -> R: gamma * I
+    if isinstance(transitions, dict):
+        normalized: list[dict[str, Any]] = []
+        for k, v in transitions.items():
+            parts = [p.strip() for p in k.split('->')]
+            if len(parts) != 2:
+                raise ValueError(f"Invalid transition key '{k}'. Use 'S -> I' format.")
+            normalized.append({'from': parts[0], 'to': parts[1], 'rate': v})
+        transitions = normalized
+    elif isinstance(transitions, list):
+        # Ensure existing format has required keys
+        for t in transitions:
+            if not all(key in t for key in ('from','to','rate')):
+                raise ValueError("Transition entries must have 'from', 'to', and 'rate' keys or use arrow-map syntax.")
     if not transitions:
         raise ValueError("No transitions defined in config")
 
