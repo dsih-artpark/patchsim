@@ -10,3 +10,4 @@ Clone the repository and install in editable mode:
 git clone https://github.com/dsih-artpark/patchsim.git
 cd patchsim
 pip install -e .
+```
