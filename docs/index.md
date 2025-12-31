@@ -2,6 +2,13 @@
 
 PatchSim is a modular, general-purpose metapopulation epidemiological simulation framework designed for research and translation use cases. It is a flexible and modular system for simulating epidemiological compartment models across single or multiple interacting patches.
 
+The framework generalizes classical compartmental models (e.g. SIR) by allowing multiple subpopulations ("patches") to interact through a weighted directed network.
+
+PatchSim emphasizes:
+- Explicit separation between patch dynamics and network structure
+- Continuous-time ODE-based simulation
+- Configurable parameters via YAML
+- Extensibility toward richer network and mobility models
  
 ## Features
 
