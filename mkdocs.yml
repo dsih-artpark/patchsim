@@ -66,13 +66,10 @@ nav:
   - Simulation Workflow: simulation-workflow.md
   - Network Design: network-design.md
   - Results: results.md
-  - Core Modules:
-      - Overview: core/overview.md
-      - Model: core/model.md
-      - Network: core/network.md
-      - Patch: core/patch.md
-      - Simulation: core/simulation.md
-
+  - References: 
+      - Core: reference/core.md
+      - Models: reference/models.md
+      - Utils: reference/utils.md
 extra:
   social:
     - icon: fontawesome/brands/github
