@@ -23,6 +23,7 @@ dependencies = [
 authors = [
     {name = "Adish Assain", email = "adish@artpark.in"},
     {name = "Sneha S", email = "sneha@artpark.in"},
+    {name = "Shreya Mukherjee", email = "shreyamukherjee@artpark.in"},
 ]
 
 [dependency-groups]
