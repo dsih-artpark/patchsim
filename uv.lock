@@ -1604,14 +1604,13 @@ dependencies = [
     { name = "networkx" },
     { name = "numpy" },
     { name = "pandas" },
-    { name = "pytest" },
     { name = "pyyaml" },
     { name = "salib" },
     { name = "scipy" },
     { name = "tqdm" },
 ]
 
-[package.dev-dependencies]
+[package.optional-dependencies]
 dev = [
     { name = "mkdocs" },
     { name = "mkdocs-material" },
@@ -1630,33 +1629,27 @@ notebook = [
 
 [package.metadata]
 requires-dist = [
+    { name = "ipywidgets", marker = "extra == 'notebook'" },
+    { name = "jupyter", marker = "extra == 'notebook'" },
     { name = "matplotlib" },
+    { name = "mkdocs", marker = "extra == 'dev'", specifier = ">=1.6.1" },
+    { name = "mkdocs-material", marker = "extra == 'dev'", specifier = ">=9.6.12" },
+    { name = "mkdocstrings", extras = ["python"], marker = "extra == 'dev'", specifier = ">=0.29.1" },
+    { name = "mypy", marker = "extra == 'dev'" },
     { name = "networkx" },
     { name = "numpy" },
     { name = "pandas" },
-    { name = "pytest", specifier = ">=8.4.0" },
+    { name = "plotly", marker = "extra == 'notebook'" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.5" },
+    { name = "pytest-cov", marker = "extra == 'dev'" },
     { name = "pyyaml" },
+    { name = "ruff", marker = "extra == 'dev'" },
     { name = "salib" },
     { name = "scipy" },
+    { name = "seaborn", marker = "extra == 'notebook'" },
     { name = "tqdm" },
 ]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "mkdocs", specifier = ">=1.6.1" },
-    { name = "mkdocs-material", specifier = ">=9.6.12" },
-    { name = "mkdocstrings", extras = ["python"], specifier = ">=0.29.1" },
-    { name = "mypy" },
-    { name = "pytest", specifier = ">=8.3.5" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-]
-notebook = [
-    { name = "ipywidgets" },
-    { name = "jupyter" },
-    { name = "plotly" },
-    { name = "seaborn" },
-]
+provides-extras = ["dev", "notebook"]
 
 [[package]]
 name = "pathspec"

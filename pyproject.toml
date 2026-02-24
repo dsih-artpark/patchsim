@@ -1,13 +1,20 @@
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
 [project]
 name = "patchsim"
 version = "0.1.0"
 description = "A modular simulation framework for patch-based metapopulation epidemiology"
 readme = "README.md"
 requires-python = ">=3.11"
-license = {text = "GPL-3.0"}
+license = { text = "GPL-3.0" }
+
+authors = [
+    { name = "Adish Assain", email = "adish@artpark.in" },
+    { name = "Sneha S", email = "sneha@artpark.in" },
+    { name = "Shreya Mukherjee", email = "shreyamukherjee@artpark.in" }
+]
 
 dependencies = [
     "numpy",
@@ -17,30 +24,25 @@ dependencies = [
     "pyyaml",
     "tqdm",
     "networkx",
-    "SALib",
-    "pytest>=8.4.0",
-]
-authors = [
-    {name = "Adish Assain", email = "adish@artpark.in"},
-    {name = "Sneha S", email = "sneha@artpark.in"},
-    {name = "Shreya Mukherjee", email = "shreyamukherjee@artpark.in"},
+    "SALib"
 ]
 
-[dependency-groups]
+[project.optional-dependencies]
 dev = [
     "pytest>=8.3.5",
+    "pytest-cov",
     "ruff",
     "mypy",
-    "pytest-cov",
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.6.12",
-    "mkdocstrings[python]>=0.29.1",
+    "mkdocstrings[python]>=0.29.1"
 ]
+
 notebook = [
     "jupyter",
     "seaborn",
     "plotly",
-    "ipywidgets",
+    "ipywidgets"
 ]
 
 [project.scripts]
@@ -48,15 +50,9 @@ patchsim = "patchsim.cli:main"
 
 [tool.ruff]
 line-length = 120
-target-version = "py39"
-select = ["E", "F", "W", "I", "FLY", "RUF", "B", "ICN"]
+target-version = "py311"
+select = ["E", "F", "W", "I", "B", "RUF"]
 fixable = ["ALL"]
-unfixable = []
 
 [tool.ruff.isort]
 known-first-party = ["patchsim"]
-
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
