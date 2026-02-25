@@ -56,3 +56,8 @@ fixable = ["ALL"]
 
 [tool.ruff.isort]
 known-first-party = ["patchsim"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.0",
+]

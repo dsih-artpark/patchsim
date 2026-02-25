@@ -1627,6 +1627,11 @@ notebook = [
     { name = "seaborn" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "ipywidgets", marker = "extra == 'notebook'" },
@@ -1650,6 +1655,9 @@ requires-dist = [
     { name = "tqdm" },
 ]
 provides-extras = ["dev", "notebook"]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=8.4.0" }]
 
 [[package]]
 name = "pathspec"
