@@ -22,30 +22,52 @@ def test_cli_help():
     assert result.returncode == 0
     assert "patchsim" in result.stdout.lower()
     
-#def test_minimal_sir_simulation():
-    # model = Model(
-    #     compartments=["S", "I", "R"],
-    #     parameters={"beta": 0.3, "gamma": 0.1},
-    #     transitions={
-    #         "S -> I": "beta * S * I / N",
-    #         "I -> R": "gamma * I",
-    #     },
-    #     population=1000,
-    #     initial_conditions={"S": 999, "I": 1, "R": 0},
-    # )
+    
+def test_yaml_model_loading():
+    from patchsim.core.simulation import load_config
+    config = load_config("configs/sample-sir-ode.yaml")
+    assert "compartments" in config
+    assert "Parameters" in config
+    assert "Transitions" in config
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
-    #results = model.simulate(t_max=10)
 
+
+def test_minimal_sir_simulation():
+    from patchsim.core.model import CompartmentalModel, NetworkModel
+    import numpy as np
+    base_model = CompartmentalModel(
+        compartments=["S", "I", "R"],
+        parameters={"beta": 0.3, "gamma": 0.1},
+        transitions=[
+            {"from": "S", "to": "I", "rate": "beta * S * I / (S + I + R)"},
+            {"from": "I", "to": "R", "rate": "gamma * I"}
+        ]
+    )
+    # Create single-patch network model
+    network_model = NetworkModel(
+        base_model=base_model,
+        num_patches=1,
+        network_matrix=[[1.0]]
+    )
+    # Initial conditions
+    y0 = {"S_0": 999.0, "I_0": 1.0, "R_0": 0.0}
+    t_range = np.linspace(0, 10, 11)
+    times, results = network_model.simulate_ode(y0, t_range)
     # Smoke-level assertions
-    #assert results is not None
-    #assert len(results) == 11  # includes t=0
-    #assert "S" in results.columns
-    #assert "I" in results.columns
-    #assert "R" in results.columns
-
-#def test_yaml_model_loading():
-    #config = load_model_config("examples/sir.yaml")
-
-    #assert "compartments" in config
-    #assert "parameters" in config
-    #assert "transitions" in config
+    assert results is not None
+    assert len(times) == 11  # includes t=0
+    assert "S_0" in results
+    assert "I_0" in results
+    assert "R_0" in results
+    # Check conservation of population
+    total = results["S_0"][-1] + results["I_0"][-1] + results["R_0"][-1]
+    assert abs(total - 1000.0) < 1.0
