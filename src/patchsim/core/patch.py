@@ -1,4 +1,5 @@
 from typing import Dict, List
+import re
 
 class Patch:
     def __init__(
@@ -59,7 +60,12 @@ class Patch:
                     rate_val = eval(rate_expr)
                 else:
                     rate_val = rate_expr
-                rate_val = rate_val * self.state[source]
+
+                # If expression already includes the source compartment, don't multiply again.
+                if isinstance(t['rate'], str) and re.search(rf"\b{re.escape(source)}\b", t['rate']):
+                    rate_val = rate_val
+                else:
+                    rate_val = rate_val * self.state[source]
             
             rates[f"{source}_to_{target}"] = rate_val
         return rates

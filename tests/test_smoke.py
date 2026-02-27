@@ -9,7 +9,7 @@ def test_patchsim_import():
 
 
 def test_core_imports():
-    from patchsim.core.model import CompartmentalModelodel, NetworkModel
+    from patchsim.core.model import CompartmentalModel, NetworkModel
     from patchsim.core.simulation import load_config, setup_simulation, run_simulation
     from patchsim.core.network import Network
     

@@ -2,6 +2,7 @@
 Core model implementation for compartmental models.
 """
 from typing import Any, Callable, Dict, List
+import re
 from scipy.integrate import odeint
 import numpy as np
 
@@ -21,14 +22,24 @@ class CompartmentalModel:
             source = transition['from']
             target = transition['to']
             rate = transition['rate']
+            rate_expr = rate
             # Handle rate expressions
-            if isinstance(rate, str):
+            if isinstance(rate_expr, str):
                 for param, value in self.parameters.items():
-                    rate = rate.replace(param, str(value))
+                    rate_expr = rate_expr.replace(param, str(value))
                 for comp, value in state.items():
-                    rate = rate.replace(comp, str(value))
-                rate = eval(rate)
-            rates[f"{source}_to_{target}"] = rate * state[source]
+                    rate_expr = rate_expr.replace(comp, str(value))
+                rate_val = eval(rate_expr)
+            else:
+                rate_val = rate_expr
+
+            # If expression already includes the source compartment, don't multiply again.
+            if isinstance(rate, str) and re.search(rf"\b{re.escape(source)}\b", rate):
+                flow = rate_val
+            else:
+                flow = rate_val * state[source]
+
+            rates[f"{source}_to_{target}"] = flow
         return rates
 
 
