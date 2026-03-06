@@ -1,7 +1,5 @@
 import subprocess
 import sys
-#from patchsim.core.model import 
-#from patchsim.utils.loader import 
 
 def test_patchsim_import():
     import patchsim
@@ -29,16 +27,6 @@ def test_yaml_model_loading():
     assert "compartments" in config
     assert "Parameters" in config
     assert "Transitions" in config
-    
-    
-    
-    
-    
-    
-    
-    
-    
-
 
 
 def test_minimal_sir_simulation():

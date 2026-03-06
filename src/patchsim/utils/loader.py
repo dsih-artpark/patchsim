@@ -2,6 +2,7 @@
 Utility functions for loading and parsing data files.
 """
 
+import logging
 import random
 from datetime import datetime
 
@@ -9,9 +10,7 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from patchsim.utils.logger import setup_logger
-
-logger = setup_logger()
+logger = logging.getLogger("PatchSimLogger")
 
 
 def read_config(config_path: str) -> dict[str, str]:

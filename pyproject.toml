@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling>=1.25.0"]
+build-backend = "hatchling.build"
 
 [project]
 name = "patchsim"
@@ -51,13 +51,10 @@ patchsim = "patchsim.cli:main"
 [tool.ruff]
 line-length = 120
 target-version = "py311"
+
+[tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "RUF"]
 fixable = ["ALL"]
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["patchsim"]
-
-[dependency-groups]
-dev = [
-    "pytest>=8.4.0",
-]
