@@ -62,28 +62,31 @@ class NetworkModel:
         return sum(state[c] for c in self.base_model.compartments)
 
     def compute_force_of_infection(self, full_state: dict[str, float], infected_compartment: str = "I") -> list[float]:
-        """Compute force of infection for each patch.
+        """Compute force of infection for each patch (per-capita rate, before beta scaling).
 
         Args:
             full_state: Current state of all compartments
             infected_compartment: Name of the compartment representing infected individuals
+        
+        Returns:
+            List of per-capita forces of infection (model_runner applies beta * FOI * S)
         """
         lambdas = []
         for i in range(self.num_patches):
             if self.num_patches == 1:
-                # Single patch case: local force of infection
+                # Single patch case: infected proportion
                 patch_state = self.get_patch_state(full_state, 0)
                 infected = patch_state[infected_compartment]
                 total_pop = self.get_patch_population(patch_state)
-                force = self.base_model.parameters['beta'] * infected / total_pop
+                force = infected / total_pop if total_pop > 0 else 0
             else:
-                # Multi-patch case: network-based force of infection
+                # Multi-patch case: network-weighted infected proportion
                 force = 0
                 for j in range(self.num_patches):
                     patch_state_j = self.get_patch_state(full_state, j)
                     infected_j = patch_state_j[infected_compartment]
                     pop_j = self.get_patch_population(patch_state_j)
-                    force += self.network[i][j] * infected_j / pop_j
+                    force += self.network[i][j] * (infected_j / pop_j if pop_j > 0 else 0)
             lambdas.append(force)
         return lambdas
 

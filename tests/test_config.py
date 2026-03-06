@@ -2,7 +2,7 @@ from patchsim.core.simulation import load_config
 import pytest
 import os
 
-def test_load_config_success(tmp_path, tmp_path_factory):
+def test_load_config_success(tmp_path):
     cfg_file = tmp_path / "c.yaml"
     cfg_file.write_text("PatchFile: foo\nSeedFile: bar\nOutputDir: out\n")
     cfg = load_config(str(cfg_file))

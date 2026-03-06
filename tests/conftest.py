@@ -1,9 +1,7 @@
-import textwrap
 import yaml
 import pandas as pd
 import numpy as np
 import os
-import tempfile
 import pytest
 
 @pytest.fixture
@@ -19,7 +17,7 @@ def tmp_data_dir(tmp_path):
 
     # sample patch CSV
     patch_df = pd.DataFrame({
-        "patch": ["PatchA", "PatchB"],
+        "patch": ["A", "B"],
         "Population": [1000, 800]
     })
     patch_csv = patch_folder / "sample-patch.csv"
@@ -27,7 +25,7 @@ def tmp_data_dir(tmp_path):
 
     # sample seed CSV (S, I, R columns)
     seed_df = pd.DataFrame({
-        "patch": ["PatchA", "PatchB"],
+        "patch": ["A", "B"],
         "S": [990, 795],
         "I": [10, 5],
         "R": [0, 0]
@@ -38,8 +36,8 @@ def tmp_data_dir(tmp_path):
     # sample network CSV (day, source, target, weight)
     net_df = pd.DataFrame({
         "day": [0, 0],
-        "source": ['"PatchA"', '"PatchB"'],
-        "target": ['"PatchB"', '"PatchA"'],
+        "source": ["A", "B"],
+        "target": ["B", "A"],
         "weight": [0.1, 0.1]
     })
     net_csv = net_folder / "sample-net.csv"
@@ -54,8 +52,8 @@ def tmp_data_dir(tmp_path):
         "TMax": 5,
         "compartments": ["S", "I", "R"],
         "PatchParameters": [
-            {"patch": "PatchA", "parameters": {"beta": 0.5, "gamma": 0.1}},
-            {"patch": "PatchB", "parameters": {"beta": 0.3, "gamma": 0.08}}
+            {"patch": "A", "parameters": {"beta": 0.5, "gamma": 0.1}},
+            {"patch": "B", "parameters": {"beta": 0.3, "gamma": 0.08}}
         ],
         "Transitions": [
             {"from": "S", "to": "I", "rate": "beta * S * I / (S + I + R)"},

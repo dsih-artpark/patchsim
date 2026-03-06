@@ -11,14 +11,4 @@ try:
 except Exception:  # pragma: no cover - package metadata missing
 	__version__ = "0.0.0"
 
-from patchsim.core.model import CompartmentalModel, NetworkModel
-from patchsim.core.simulation import load_config, run_simulation, setup_simulation
-
-__all__ = [
-	"__version__",
-	"CompartmentalModel",
-	"NetworkModel",
-	"load_config",
-	"setup_simulation",
-	"run_simulation",
-]
+# Public API exports

@@ -11,7 +11,7 @@ def test_setup_simulation_returns_objects(tmp_data_dir):
     assert isinstance(y0, dict)
     # check that y0 keys include S_0 and I_1 etc.
     assert "S_0" in y0 and "I_1" in y0
-    assert patches == ["PatchA", "PatchB"]
+    assert patches == ["A", "B"]
 
 def test_setup_simulation_population_check(tmp_data_dir):
     # mutate seed so it doesn't sum to population to trigger error

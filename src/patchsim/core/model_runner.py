@@ -17,28 +17,28 @@ class Model:
             state = {v: y[i] for i, v in enumerate(self.all_vars)}
             dydt = {v: 0.0 for v in self.all_vars}
 
-            # network infection term
+            # Compute network-based force of infection (per-capita, without beta)
             lambdas = self.network.compute_force_of_infection(state)
-            beta = self.network.base_model.parameters["beta"]
+            beta = self.network.base_model.parameters.get("beta", 0.0)
 
+            # Apply transitions for all patches
             for i in range(self.network.num_patches):
-                S = state[f"S_{i}"]
-                infection = beta * S * lambdas[i]
-                dydt[f"S_{i}"] -= infection
-                dydt[f"I_{i}"] += infection
-
-            # local transitions
-            for i in range(self.network.num_patches):
-                patch_state = {
-                    c: state[f"{c}_{i}"] for c in self.compartments
-                }
-
+                patch_state = {c: state[f"{c}_{i}"] for c in self.compartments}
                 rates = self.network.base_model.compute_rates(patch_state)
 
                 for key, rate in rates.items():
                     src, tgt = key.split("_to_")
-                    dydt[f"{src}_{i}"] -= rate
-                    dydt[f"{tgt}_{i}"] += rate
+                    
+                    # For S→I transitions, scale by network force of infection
+                    if src == "S" and tgt == "I":
+                        # rate from compute_rates is beta*S (before network scaling)
+                        # Apply network FOI: lambda_i = network-weighted infected proportion
+                        adjusted_rate = beta * state[f"S_{i}"] * lambdas[i]
+                    else:
+                        adjusted_rate = rate
+                    
+                    dydt[f"{src}_{i}"] -= adjusted_rate
+                    dydt[f"{tgt}_{i}"] += adjusted_rate
 
             return [dydt[v] for v in self.all_vars]
 
