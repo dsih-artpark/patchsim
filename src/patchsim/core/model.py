@@ -19,8 +19,8 @@ class CompartmentalModel:
         """Compute transition rates for each compartment."""
         rates = {}
         for transition in self.transitions:
-            source = transition['from']
-            target = transition['to']
+            transition_label = transition['transition']
+            source, target = [p.strip() for p in transition_label.split("->")]
             rate = transition['rate']
             rate_expr = rate
             # Handle rate expressions
@@ -39,7 +39,7 @@ class CompartmentalModel:
             else:
                 flow = rate_val * state[source]
 
-            rates[f"{source}_to_{target}"] = flow
+            rates[transition_label] = flow
         return rates
 
 
@@ -121,9 +121,9 @@ class NetworkModel:
 
             # Update derivatives based on rates
             for transition in self.base_model.transitions:
-                source = transition['from']
-                target = transition['to']
-                rate = rates[f"{source}_to_{target}"]
+                transition_label = transition['transition']
+                source, target = [p.strip() for p in transition_label.split("->")]
+                rate = rates[transition_label]
 
                 # Decrease source compartment
                 derivatives[f"{source}_{i}"] -= rate

@@ -24,7 +24,8 @@ dependencies = [
     "pyyaml",
     "tqdm",
     "networkx",
-    "SALib"
+    "SALib",
+    "rich>=14.3.3",
 ]
 
 [project.optional-dependencies]

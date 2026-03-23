@@ -42,9 +42,8 @@ class Network:
             # Pass network force of infection to patch for S->I transitions
             rates = patch.compute_transition_rates(force_of_infection=lambdas[idx])
             for t in patch.transitions:
-                s = t['from']
-                r = t['to']
-                key = f"{s}_to_{r}"
+                key = t['transition']
+                s, r = [p.strip() for p in key.split("->")]
                 rate = rates[key]
                 derivs[f"{s}_{patch.id}"] = derivs.get(f"{s}_{patch.id}", 0) - rate
                 derivs[f"{r}_{patch.id}"] = derivs.get(f"{r}_{patch.id}", 0) + rate

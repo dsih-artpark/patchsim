@@ -43,8 +43,8 @@ class Patch:
         """
         rates = {}
         for t in self.transitions:
-            source = t['from']
-            target = t['to']
+            transition_label = t['transition']
+            source, target = [p.strip() for p in transition_label.split("->")]
             rate_expr = t['rate']
             
             # If S->I transition and network force provided, use it
@@ -67,5 +67,5 @@ class Patch:
                 else:
                     rate_val = rate_val * self.state[source]
             
-            rates[f"{source}_to_{target}"] = rate_val
+            rates[transition_label] = rate_val
         return rates

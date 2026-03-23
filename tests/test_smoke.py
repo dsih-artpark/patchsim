@@ -38,8 +38,8 @@ def test_minimal_sir_simulation():
         compartments=["S", "I", "R"],
         parameters={"beta": 0.3, "gamma": 0.1},
         transitions=[
-            {"from": "S", "to": "I", "rate": "beta"},
-            {"from": "I", "to": "R", "rate": "gamma * I"}
+            {"transition": "S->I", "rate": "beta"},
+            {"transition": "I->R", "rate": "gamma * I"}
         ]
     )
     # Create single-patch network model

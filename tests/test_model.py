@@ -5,8 +5,8 @@ import pytest
 def test_compute_rates_with_parameters():
     compartments = ["S", "I", "R"]
     transitions = [
-        {"from": "S", "to": "I", "rate": "beta * S * I / (S + I + R)"},
-        {"from": "I", "to": "R", "rate": "gamma * I"}
+        {"transition": "S->I", "rate": "beta * S * I / (S + I + R)"},
+        {"transition": "I->R", "rate": "gamma * I"}
     ]
     params = {"beta": 0.5, "gamma": 0.1}
     model = CompartmentalModel(compartments=compartments, parameters=params, transitions=transitions)
@@ -17,17 +17,17 @@ def test_compute_rates_with_parameters():
     N = sum(state.values())
     expected_inf_rate = (0.5 * state["S"] * state["I"] / N) * state["S"]
     # check keys present
-    assert "S_to_I" in rates
-    assert "I_to_R" in rates
+    assert "S->I" in rates
+    assert "I->R" in rates
     # numeric sanity: rates positive
-    assert rates["S_to_I"] > 0
-    assert rates["I_to_R"] == pytest.approx(0.1 * state["I"])
+    assert rates["S->I"] > 0
+    assert rates["I->R"] == pytest.approx(0.1 * state["I"])
 
 def test_networkmodel_derivatives_conserve_population():
     compartments = ["S", "I", "R"]
     transitions = [
-        {"from": "S", "to": "I", "rate": "beta * S * I / (S + I + R)"},
-        {"from": "I", "to": "R", "rate": "gamma * I"}
+        {"transition": "S->I", "rate": "beta * S * I / (S + I + R)"},
+        {"transition": "I->R", "rate": "gamma * I"}
     ]
     params = {"beta": 0.5, "gamma": 0.1}
     base = CompartmentalModel(compartments=compartments, parameters=params, transitions=transitions)

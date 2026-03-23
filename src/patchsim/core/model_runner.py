@@ -27,7 +27,7 @@ class Model:
                 rates = self.network.base_model.compute_rates(patch_state)
 
                 for key, rate in rates.items():
-                    src, tgt = key.split("_to_")
+                    src, tgt = [p.strip() for p in key.split("->")]
                     
                     # For S→I transitions, scale by network force of infection
                     if src == "S" and tgt == "I":

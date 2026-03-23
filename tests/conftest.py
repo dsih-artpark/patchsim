@@ -55,10 +55,10 @@ def tmp_data_dir(tmp_path):
             {"patch": "A", "parameters": {"beta": 0.5, "gamma": 0.1}},
             {"patch": "B", "parameters": {"beta": 0.3, "gamma": 0.08}}
         ],
-        "Transitions": [
-            {"from": "S", "to": "I", "rate": "beta * S * I / (S + I + R)"},
-            {"from": "I", "to": "R", "rate": "gamma * I"}
-        ]
+        "Transitions": {
+            "S -> I": "beta * S * I / (S + I + R)",
+            "I -> R": "gamma * I"
+        }
     }
     config_path = tmp_path / "config.yaml"
     with open(config_path, "w") as f:
