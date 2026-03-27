@@ -1,12 +1,12 @@
 import argparse
+from importlib import resources
 import logging
 from pathlib import Path
-import sys
+import shutil
 import textwrap
 
-import yaml
-
 from patchsim.core.simulation import load_config, run_simulation, setup_simulation
+from patchsim import __version__
 
 
 def _configure_logging() -> None:
@@ -38,30 +38,53 @@ def _cmd_validate(config_path: str) -> None:
     logging.info("Configuration is valid: %s", config_path)
 
 
-def _cmd_init(output: str, force: bool = False) -> None:
-    out_path = Path(output)
-    if out_path.exists() and not force:
-        raise FileExistsError(f"Refusing to overwrite existing file: {out_path}. Use --force to overwrite.")
+def _copy_template_tree(template_node, target_path: Path) -> None:
+    if template_node.is_dir():
+        target_path.mkdir(parents=True, exist_ok=True)
+        for child in template_node.iterdir():
+            _copy_template_tree(child, target_path / child.name)
+        return
 
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    template = {
-        "PatchFile": "data/patch/sample-sir-ode-patch-population.csv",
-        "NetworkFile": "data/networks/sample-network-static.csv",
-        "SeedFile": "data/seeds/sample-sir-ode-patchA-2.csv",
-        "ModelName": "sample-sir-ode",
-        "TMax": 50,
-        "OutputDir": "output/sample-sir-ode",
-        "compartments": ["S", "I", "R"],
-        "Parameters": {"beta": 0.08, "gamma": 0.1},
-        "Transitions": {
-            "S -> I": "beta",
-            "I -> R": "gamma * I",
-        },
-    }
-    with out_path.open("w", encoding="utf-8") as f:
-        yaml.safe_dump(template, f, sort_keys=False)
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    target_path.write_bytes(template_node.read_bytes())
 
-    logging.info("Created starter config: %s", out_path)
+
+def _cmd_init(name: str, force: bool = False) -> None:
+    project_dir = Path(name)
+    if project_dir.exists() and any(project_dir.iterdir()) and not force:
+        raise FileExistsError(f"Refusing to overwrite existing directory: {project_dir}. Use --force to overwrite.")
+
+    if project_dir.exists() and force:
+        shutil.rmtree(project_dir)
+
+    template_root = resources.files("patchsim").joinpath("templates", "project")
+    _copy_template_tree(template_root, project_dir)
+
+    config_path = project_dir / "config.yaml"
+    rendered = config_path.read_text(encoding="utf-8").replace("{{PROJECT_NAME}}", project_dir.name)
+    config_path.write_text(rendered, encoding="utf-8")
+
+    logging.info("Created project scaffold at: %s", project_dir)
+
+
+def _list_builtin_models() -> list[str]:
+    models_dir = Path(__file__).resolve().parent / "models"
+    models = []
+    for f in sorted(models_dir.glob("*.py")):
+        if f.name == "__init__.py":
+            continue
+        models.append(f.stem)
+    return models
+
+
+def _cmd_list_models() -> None:
+    models = _list_builtin_models()
+    if not models:
+        logging.info("No built-in models found.")
+        return
+    logging.info("Built-in models:")
+    for model in models:
+        logging.info("- %s", model)
 
 
 def main():
@@ -76,45 +99,39 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent("""
 Examples:
-  patchsim run --config configs/sample-sir-ode.yaml
-  patchsim validate --config configs/sample-sir-ode.yaml
-  patchsim init --output configs/sample-sir-ode.yaml
-
-Legacy:
-  patchsim --config configs/sample-sir-ode.yaml
+    patchsim init my-project
+    patchsim run -c my-project/config.yaml
+    patchsim validate -c my-project/config.yaml
+    patchsim list-models
         """)
     )
-    # Backward-compatible path: `patchsim --config ...` == `patchsim run --config ...`
-    parser.add_argument(
-        "--config",
-        type=str,
-        required=False,
-        help="Path to the configuration file (legacy mode; equivalent to run --config)",
-    )
-    subparsers = parser.add_subparsers(dest="command")
+    parser.add_argument("--version", action="version", version=f"patchsim {__version__}")
+
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    init_p = subparsers.add_parser("init", help="Scaffold a new PatchSim project")
+    init_p.add_argument("name", help="Directory name for the new project")
+    init_p.add_argument("--force", action="store_true", help="Overwrite target directory if it already exists")
 
     run_p = subparsers.add_parser("run", help="Run a simulation")
-    run_p.add_argument("--config", required=True, help="Path to simulation config YAML")
+    run_p.add_argument("-c", "--config", required=True, help="Path to simulation config YAML")
 
     validate_p = subparsers.add_parser("validate", help="Validate config and inputs")
-    validate_p.add_argument("--config", required=True, help="Path to simulation config YAML")
+    validate_p.add_argument("-c", "--config", required=True, help="Path to simulation config YAML")
 
-    init_p = subparsers.add_parser("init", help="Create a starter config file")
-    init_p.add_argument("--output", default="configs/sample-sir-ode.yaml", help="Output path for starter config")
-    init_p.add_argument("--force", action="store_true", help="Overwrite output file if it exists")
+    subparsers.add_parser("list-models", help="List available built-in models")
 
     args = parser.parse_args()
 
     try:
-        if args.command == "run":
+        if args.command == "init":
+            _cmd_init(args.name, force=args.force)
+        elif args.command == "run":
             _cmd_run(args.config)
         elif args.command == "validate":
             _cmd_validate(args.config)
-        elif args.command == "init":
-            _cmd_init(args.output, force=args.force)
-        elif args.config:
-            # Legacy mode
-            _cmd_run(args.config)
+        elif args.command == "list-models":
+            _cmd_list_models()
         else:
             parser.print_help()
             raise SystemExit(2)

@@ -23,10 +23,10 @@ Files in `patchsim.models` serve as:
 
 ---
 
-## ka-fmd-sirsv-discrete
+## ka_fmd_sirsv_discrete
 
 **File:**  
-`patchsim/models/ka-fmd-sirsv-discrete.py`
+`patchsim/models/ka_fmd_sirsv_discrete.py`
 
 **Description:**  
 A discrete-time, multi-compartment SIRSV-style model designed for

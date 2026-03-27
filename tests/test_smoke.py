@@ -6,6 +6,17 @@ def test_patchsim_import():
     assert hasattr(patchsim, "__version__")
 
 
+def test_patchsim_sdk_exports():
+    import patchsim
+
+    assert hasattr(patchsim, "CompartmentalModel")
+    assert hasattr(patchsim, "NetworkModel")
+    assert hasattr(patchsim, "load_config")
+    assert hasattr(patchsim, "setup_simulation")
+    assert hasattr(patchsim, "run_simulation")
+    assert hasattr(patchsim, "plot_patch_subplots")
+
+
 def test_core_imports():
     from patchsim.core.model import CompartmentalModel, NetworkModel
     from patchsim.core.simulation import load_config, setup_simulation, run_simulation
@@ -19,6 +30,43 @@ def test_cli_help():
     )
     assert result.returncode == 0
     assert "patchsim" in result.stdout.lower()
+
+
+def test_cli_version():
+    result = subprocess.run(
+        ["patchsim", "--version"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    assert "patchsim" in result.stdout.lower()
+
+
+def test_cli_list_models():
+    result = subprocess.run(
+        ["patchsim", "list-models"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    output = (result.stdout + result.stderr).lower()
+    assert "ka_fmd_sirsv_discrete" in output
+
+
+def test_cli_init_scaffold(tmp_path):
+    project_dir = tmp_path / "demo-project"
+    result = subprocess.run(
+        ["patchsim", "init", str(project_dir)],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+
+    assert (project_dir / "config.yaml").exists()
+    assert (project_dir / "data" / "patch" / "patch-population.csv").exists()
+    assert (project_dir / "data" / "networks" / "network-static.csv").exists()
+    assert (project_dir / "data" / "seeds" / "seed-initial.csv").exists()
+    assert (project_dir / "output").exists()
     
     
 def test_yaml_model_loading():

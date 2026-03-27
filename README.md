@@ -15,6 +15,27 @@ To develop a general-purpose, modular simulation framework for patch-based metap
 
 ---
 
+## Unique Selling Point (USP)
+
+PatchSim combines metapopulation network dynamics with a lightweight, configuration-first workflow:
+
+- Network-aware compartment transitions across connected patches
+- Arrow-map transition syntax in YAML for explicit model specification
+- Fast iteration loop from config edits to reproducible outputs
+
+---
+
+## Unique Value Proposition (UVP)
+
+Compared to many epidemiology tools that are either code-heavy or tightly bound to a specific disease model, PatchSim offers:
+
+- **Model flexibility**: define SIR/SIRS-style variants through config transitions
+- **Research-friendly reproducibility**: deterministic inputs, logged runs, and versioned config files
+- **Dual interface**: SDK import for programmatic workflows and CLI for operational runs
+- **Extensibility path**: built-in structure for adding custom models and project templates
+
+---
+
 ## Core Features
 
 PatchSim aims to support a range of modelling features commonly used in metapopulation disease simulations:
@@ -40,7 +61,13 @@ PatchSim aims to support a range of modelling features commonly used in metapopu
 
 ## Installation
 
-To install PatchSim using [uv](https://github.com/astral-sh/uv):
+Install from PyPI:
+
+```bash
+pip install patchsim
+```
+
+Install from source using [uv](https://github.com/astral-sh/uv):
 
 ```bash
 # Clone the repository
@@ -62,17 +89,36 @@ uv pip install -e .[dev]
 
 ### Command Line Interface
 
-PatchSim provides a command-line interface for running simulations:
+PatchSim provides a subcommand-based CLI:
 
 ```bash
 # Show help and available options
 patchsim --help
 
-# Run simulation with sample SIR model
-patchsim --config configs/sample-sir-ode.yaml
+# Show package version
+patchsim --version
 
-# Run simulation with custom model
-patchsim --config path/to/your/config.yaml
+# Initialize a new self-contained project
+patchsim init my-project
+
+# Validate config without running
+patchsim validate -c my-project/config.yaml
+
+# Run simulation
+patchsim run -c my-project/config.yaml
+
+# List built-in models
+patchsim list-models
+```
+
+### Python SDK
+
+```python
+import patchsim
+
+config = patchsim.load_config("config.yaml")
+net, y0, patches, n = patchsim.setup_simulation(config)
+patchsim.run_simulation(config, "my-model", net, y0, patches, n)
 ```
 
 The simulation outputs are saved in the following structure:

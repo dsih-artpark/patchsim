@@ -1,14 +1,24 @@
+"""PatchSim public SDK interface."""
 
 from __future__ import annotations
 
-try:
-	from importlib.metadata import version as _pkg_version
-except Exception:  # pragma: no cover - fallback for old environments
-	_pkg_version = None  # type: ignore[assignment]
+from importlib.metadata import PackageNotFoundError, version
+
+from patchsim.core.model import CompartmentalModel, NetworkModel
+from patchsim.core.simulation import load_config, run_simulation, setup_simulation
+from patchsim.utils.viz import plot_patch_subplots
 
 try:
-	__version__ = _pkg_version("patchsim") if _pkg_version else "0.0.0"
-except Exception:  # pragma: no cover - package metadata missing
-	__version__ = "0.0.0"
+    __version__ = version("patchsim")
+except PackageNotFoundError:  # pragma: no cover - local editable fallback
+    __version__ = "0.0.0"
 
-# Public API exports
+__all__ = [
+    "__version__",
+    "CompartmentalModel",
+    "NetworkModel",
+    "load_config",
+    "setup_simulation",
+    "run_simulation",
+    "plot_patch_subplots",
+]

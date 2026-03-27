@@ -9,6 +9,17 @@ description = "A modular simulation framework for patch-based metapopulation epi
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "GPL-3.0" }
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+]
 
 authors = [
     { name = "Adish Assain", email = "adish@artpark.in" },
@@ -27,6 +38,11 @@ dependencies = [
     "SALib",
     "rich>=14.3.3",
 ]
+
+[project.urls]
+Homepage = "https://github.com/dsih-artpark/patchsim"
+Repository = "https://github.com/dsih-artpark/patchsim"
+Documentation = "https://dsih-artpark.github.io/patchsim/"
 
 [project.optional-dependencies]
 dev = [
@@ -61,3 +77,13 @@ fixable = ["ALL"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["patchsim"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/patchsim"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src/patchsim/templates/**",
+    "/README.md",
+    "/LICENSE",
+]
