@@ -29,8 +29,12 @@ class Model:
                 for key, rate in rates.items():
                     src, tgt = [p.strip() for p in key.split("->")]
 
-                    # For S→I transitions, scale by network force of infection
-                    if src == "S" and tgt == "I":
+                    # Apply network FOI to infection transitions (S→I, S→E, etc.)
+                    # Check if target is an infection compartment (typically I, E, or similar)
+                    infection_compartments = {"I", "E"}  # Common infection targets
+                    is_infection_transition = src == "S" and tgt in infection_compartments
+
+                    if is_infection_transition:
                         # rate from compute_rates is beta*S (before network scaling)
                         # Apply network FOI: lambda_i = network-weighted infected proportion
                         adjusted_rate = beta * state[f"S_{i}"] * lambdas[i]
@@ -46,6 +50,10 @@ class Model:
 
     def solve(self, y0, t_range):
         rhs = self.construct_ode()
+        # Validate all required variables are present in y0
+        missing = [v for v in self.all_vars if v not in y0]
+        if missing:
+            raise ValueError(f"Missing initial values for: {missing}")
         y0_vec = [y0[v] for v in self.all_vars]
         sol = odeint(rhs, y0_vec, t_range)
         return {v: sol[:, i] for i, v in enumerate(self.all_vars)}

@@ -70,9 +70,13 @@ def test_cli_init_scaffold(tmp_path):
 
 
 def test_yaml_model_loading():
+    from pathlib import Path
+
     from patchsim.core.simulation import load_config
 
-    config = load_config("configs/sample-sir-ode.yaml")
+    # Resolve config path relative to test file (not CWD) for cross-directory execution
+    config_path = str(Path(__file__).resolve().parents[1] / "configs" / "sample-sir-ode.yaml")
+    config = load_config(config_path)
     assert "compartments" in config
     assert "Parameters" in config
     assert "Transitions" in config

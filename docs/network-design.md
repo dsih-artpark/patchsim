@@ -15,5 +15,5 @@ to the force of infection in the target patch.
 
 ## Normalization
 
-Rows are normalized so that outgoing weights from each patch sum to 1.
+For each day, rows are normalized so outgoing weights from each source patch sum to 1 across all targets.
 Normalization occurs exactly once to prevent scaling errors.

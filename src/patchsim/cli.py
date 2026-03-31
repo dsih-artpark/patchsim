@@ -51,6 +51,14 @@ def _copy_template_tree(template_node, target_path: Path) -> None:
 
 def _cmd_init(name: str, force: bool = False) -> None:
     project_dir = Path(name)
+
+    # Safety checks: prevent deleting cwd or non-directories
+    resolved = project_dir.resolve()
+    if project_dir.exists() and not project_dir.is_dir():
+        raise NotADirectoryError(f"Target exists and is not a directory: {project_dir}")
+    if force and resolved == Path.cwd().resolve():
+        raise ValueError(f"Refusing to overwrite current working directory: {resolved}")
+
     if project_dir.exists() and any(project_dir.iterdir()) and not force:
         raise FileExistsError(f"Refusing to overwrite existing directory: {project_dir}. Use --force to overwrite.")
 

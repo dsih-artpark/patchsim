@@ -38,7 +38,7 @@ plugins:
       default_handler: python
       handlers:
         python:
-          paths: ["src/patchsim"]
+          paths: ["src"]
           options:
             docstring_style: google
             show_source: true

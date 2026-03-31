@@ -35,8 +35,11 @@ def setup_logger(model_name, config, num_patches, patches, base_model):
     # log per-patch parameters if defined
     if "PatchParameters" in config:
         logger.info("Per-patch parameter overrides detected:")
-        for entry in config["PatchParameters"]:
-            patch = entry["patch"]
+        for idx, entry in enumerate(config["PatchParameters"]):
+            if not isinstance(entry, dict):
+                logger.warning(f"  PatchParameters[{idx}] is not a mapping: {entry!r}")
+                continue
+            patch = entry.get("patch", f"<missing-patch-{idx}>")
             params = entry.get("parameters", {})
             logger.info(f"  {patch}: {params}")
     else:

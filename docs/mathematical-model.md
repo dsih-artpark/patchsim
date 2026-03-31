@@ -7,11 +7,13 @@ PatchSim implements compartmental models using continuous-time ODEs.
 Let:
 - S_i, I_i, R_i be compartments of patch i
 - N_i = S_i + I_i + R_i
-- W_ij be the network weight from patch j to patch i
+- W_ij be the network weight from source patch j to target patch i (i.e., W_ij denotes the weight of transmission from j to i)
 
 The force of infection for patch i is:
 
 λ_i(t) = Σ_j W_ij * (I_j / N_j)
+
+where j is the source patch and i is the target patch, matching the CSV weight matrix ordering (target, source).
 
 The resulting dynamics are:
 

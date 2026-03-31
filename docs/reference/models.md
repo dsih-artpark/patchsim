@@ -51,7 +51,7 @@ To create a new model:
 1. Copy an existing model script
 2. Modify compartments and transitions
 3. Adjust parameters or network structure
-4. Run via `patchsim.cli`
+4. Run via the `patchsim` CLI, for example `patchsim run -c config.yaml`
 
 For most use cases, users are encouraged to prefer
 **YAML-based model definitions** over Python scripts.

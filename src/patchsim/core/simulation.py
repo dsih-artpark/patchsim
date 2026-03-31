@@ -57,9 +57,8 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
     # Set up network
     num_patches = len(patches)
     if "NetworkFile" not in config or config["NetworkFile"] is None:
-        # Single patch model
-        network_matrix = [[0]]
-        num_patches = 1
+        # Multi-patch model with no network: use zero matrix
+        network_matrix = np.zeros((num_patches, num_patches))
     else:
         # Multi-patch model
         net_df = pd.read_csv(config["NetworkFile"])

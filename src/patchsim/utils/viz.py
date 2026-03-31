@@ -9,6 +9,8 @@ def plot_patch_subplots(t_range, out_ode, patches, output_dir, model_name, patch
     Plots all patches as subplots in a single figure and saves the figure.
     """
     n = len(patches)
+    if n == 0:
+        raise ValueError("`patches` must contain at least one patch")
     ncols = math.ceil(math.sqrt(n))
     nrows = math.ceil(n / ncols)
     fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 4 * nrows))
@@ -26,8 +28,8 @@ def plot_patch_subplots(t_range, out_ode, patches, output_dir, model_name, patch
         ax.set_xlabel("Time")
         ax.set_ylabel("Count")
         ax.legend()
-    # Hide unused subplots
-    for j in range(i + 1, len(axes)):
+    # Hide unused subplots (use n instead of loop index i)
+    for j in range(n, len(axes)):
         fig.delaxes(axes[j])
     plt.tight_layout()
     os.makedirs(output_dir, exist_ok=True)

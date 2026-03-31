@@ -86,6 +86,7 @@ packages = ["src/patchsim"]
 
 [tool.hatch.build.targets.sdist]
 include = [
+    "/src/patchsim/**",
     "/src/patchsim/templates/**",
     "/README.md",
     "/LICENSE",
