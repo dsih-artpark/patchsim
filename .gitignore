@@ -152,6 +152,16 @@ dmypy.json
 *.xlsx
 output/**
 
+# Keep package template scaffold files tracked
+!src/patchsim/templates/project/data/
+!src/patchsim/templates/project/data/networks/
+!src/patchsim/templates/project/data/networks/*.csv
+!src/patchsim/templates/project/data/patch/
+!src/patchsim/templates/project/data/patch/*.csv
+!src/patchsim/templates/project/data/seeds/
+!src/patchsim/templates/project/data/seeds/*.csv
+!src/patchsim/templates/project/output/.gitkeep
+
 # Additions for GeoJSON, .zip files, and shapefiles
 *.geojson
 *.zip
