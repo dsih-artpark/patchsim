@@ -19,27 +19,25 @@ class Model:
 
             # Compute network-based force of infection (per-capita, without beta)
             lambdas = self.network.compute_force_of_infection(state)
-            beta = self.network.base_model.parameters.get("beta", 0.0)
 
             # Apply transitions for all patches
             for i in range(self.network.num_patches):
                 patch_state = {c: state[f"{c}_{i}"] for c in self.compartments}
                 rates = self.network.base_model.compute_rates(patch_state)
+                patch_params = self.network.base_model.parameters
 
                 for key, rate in rates.items():
                     src, tgt = [p.strip() for p in key.split("->")]
 
-                    # Apply network FOI to infection transitions (S→I, S→E, etc.)
-                    # Check if target is an infection compartment (typically I, E, or similar)
-                    infection_compartments = {"I", "E"}  # Common infection targets
+                    # Determine if this is an infection transition
+                    infection_compartments = set(getattr(self.network, "infection_compartments", {"I", "E"}))
                     is_infection_transition = src == "S" and tgt in infection_compartments
 
-                    if is_infection_transition:
-                        # rate from compute_rates is beta*S (before network scaling)
-                        # Apply network FOI: lambda_i = network-weighted infected proportion
-                        adjusted_rate = beta * state[f"S_{i}"] * lambdas[i]
-                    else:
-                        adjusted_rate = rate
+                    # Use network helper to apply FOI adjustment consistently
+                    has_network = self.network.num_patches > 1 and self.network.network is not None
+                    adjusted_rate = self.network._adjust_infection_rate(
+                        patch_params, key, rate, patch_state, lambdas, i, is_infection_transition, has_network
+                    )
 
                     dydt[f"{src}_{i}"] -= adjusted_rate
                     dydt[f"{tgt}_{i}"] += adjusted_rate
