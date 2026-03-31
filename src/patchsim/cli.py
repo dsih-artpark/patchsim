@@ -52,12 +52,20 @@ def _copy_template_tree(template_node, target_path: Path) -> None:
 def _cmd_init(name: str, force: bool = False) -> None:
     project_dir = Path(name)
 
-    # Safety checks: prevent deleting cwd or non-directories
+    # Safety checks: prevent deleting cwd, parent dirs, root, or non-directories
     resolved = project_dir.resolve()
+    cwd = Path.cwd().resolve()
+
     if project_dir.exists() and not project_dir.is_dir():
         raise NotADirectoryError(f"Target exists and is not a directory: {project_dir}")
-    if force and resolved == Path.cwd().resolve():
-        raise ValueError(f"Refusing to overwrite current working directory: {resolved}")
+
+    # Block deletion of root, cwd, or any ancestor of cwd
+    if force and (
+        resolved == Path(resolved.anchor)  # Filesystem root (/ or C:\)
+        or resolved == cwd  # Current working directory
+        or cwd in resolved.parents  # resolved is ancestor of cwd (e.g., ..)
+    ):
+        raise ValueError(f"Refusing to overwrite unsafe target: {resolved}")
 
     if project_dir.exists() and any(project_dir.iterdir()) and not force:
         raise FileExistsError(f"Refusing to overwrite existing directory: {project_dir}. Use --force to overwrite.")

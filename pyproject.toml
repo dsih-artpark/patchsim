@@ -83,6 +83,9 @@ known-first-party = ["patchsim"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/patchsim"]
+include = [
+    { path = "src/patchsim/templates", from = "." },
+]
 
 [tool.hatch.build.targets.sdist]
 include = [

@@ -17,8 +17,14 @@ class CompartmentalModel:
         self.parameters = parameters
         self.transitions = transitions
 
-    def compute_rates(self, state: dict[str, float]) -> dict[str, float]:
-        """Compute transition rates for each compartment."""
+    def compute_rates(self, state: dict[str, float], parameters: dict[str, float] | None = None) -> dict[str, float]:
+        """Compute transition rates for each compartment.
+
+        Args:
+            state: Current compartment state
+            parameters: Optional parameter override (defaults to self.parameters)
+        """
+        params = parameters if parameters is not None else self.parameters
         rates = {}
         for transition in self.transitions:
             transition_label = transition["transition"]
@@ -28,7 +34,7 @@ class CompartmentalModel:
             # Handle rate expressions
             if isinstance(rate_expr, str):
                 # Safe evaluation: build scope from parameters and state, disable builtins
-                scope = {**self.parameters, **state}
+                scope = {**params, **state}
                 try:
                     rate_val = eval(rate_expr, {"__builtins__": {}}, scope)
                 except (KeyError, NameError, ValueError) as e:
@@ -99,42 +105,30 @@ class NetworkModel:
         derivatives = {c: 0.0 for c in self.all_compartments}
 
         # Compute network-mediated force of infection for each patch
-        lambdas = []
-        if self.num_patches > 1 and hasattr(self, "network") and self.network is not None:
-            lambdas = self.compute_force_of_infection(state)
-        else:
-            # Single patch or no network: compute local FOI
-            lambdas = self.compute_force_of_infection(state)
+        lambdas = self.compute_force_of_infection(state)
 
         # Process each patch
         for i in range(self.num_patches):
             # Get state for this patch
             patch_state = self.get_patch_state(state, i)
 
-            # Get rates for this patch
-            if hasattr(self, "patch_parameters") and hasattr(self, "patch_names"):
-                # Use canonical patch ordering from setup_simulation to avoid dict key order issues
-                patch_name = self.patch_names[i] if i < len(self.patch_names) else None
-                patch_params = {**self.base_model.parameters, **self.patch_parameters.get(patch_name, {})}
-            elif hasattr(self, "patch_parameters"):
-                # Fallback if patch_names not available
+            # Get rates for this patch (use fallback to dict order if patch_names not available)
+            if hasattr(self, "patch_parameters"):
                 patch_names = list(self.patch_parameters.keys())
                 patch_name = patch_names[i] if i < len(patch_names) else None
                 patch_params = {**self.base_model.parameters, **self.patch_parameters.get(patch_name, {})}
             else:
                 patch_params = self.base_model.parameters
 
-            # Temporarily override parameters for this patch
-            old_params = self.base_model.parameters
-            self.base_model.parameters = patch_params
-            rates = self.base_model.compute_rates(patch_state)
-            self.base_model.parameters = old_params  # restore global parameters
+            # Compute rates with patch-specific parameters without mutating shared state
+            rates = self.base_model.compute_rates(patch_state, parameters=patch_params)
 
             # Update derivatives based on rates, applying network-mediated FOI to infection transitions
             for transition in self.base_model.transitions:
                 transition_label = transition["transition"]
                 source, target = [p.strip() for p in transition_label.split("->")]
                 rate = rates[transition_label]
+                original_rate_expr = transition.get("rate", "")
 
                 # Apply network-mediated FOI to susceptible-to-infection transitions
                 infection_compartments = {"I", "E"}  # Common infection targets
@@ -144,9 +138,9 @@ class NetworkModel:
 
                 if is_infection_transition and has_network:
                     # Network case: Apply network FOI (lambdas already computed above)
-                    # rate from compute_rates is beta*S; apply lambda scaling
+                    # Check if original expression includes beta term
                     beta = patch_params.get("beta", 1.0)
-                    if "beta" in str(rate):
+                    if isinstance(original_rate_expr, str) and "beta" in original_rate_expr:
                         # Rate expression includes beta; apply network FOI correction
                         adjusted_rate = beta * patch_state["S"] * lambdas[i]
                     else:

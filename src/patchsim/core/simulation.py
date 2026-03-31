@@ -48,6 +48,8 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
 
     for _, row in seed_df.iterrows():
         patch = row["patch"]
+        if patch not in populations:
+            raise ValueError(f"SeedFile contains unknown patch '{patch}' not present in PatchFile")
         total = sum(row[c] for c in compartments)
         if not all(row[c] >= 0 for c in compartments):
             raise ValueError(f"Seed values must be non-negative for patch {patch}")
@@ -89,18 +91,20 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
         transitions.append({"transition": f"{parts[0]}->{parts[1]}", "rate": v})
 
     # Collect per-patch parameters if provided
-    patch_params = {}
+    patch_params: dict[str, dict[str, Any]] = {}
     if "PatchParameters" in config:
         for entry in config["PatchParameters"]:
             patch_name = entry["patch"]
             patch_params[patch_name] = entry.get("parameters", {})
 
-    # Validate patch parameter entries
+    # Validate that all configured patches exist in PatchFile
+    unknown_patches = set(patch_params) - set(patches)
+    if unknown_patches:
+        raise ValueError(f"PatchParameters contains unknown patches: {sorted(unknown_patches)}")
+
+    # Ensure every patch has a full parameter set: global + per-patch override
     for p in patches:
-        if p not in patch_params:
-            # fallback: use global params if not defined for this patch
-            # patch_params[p] = global_params.copy()
-            patch_params[p] = {**global_params, **patch_params.get(p, {})}
+        patch_params[p] = {**global_params, **patch_params.get(p, {})}
 
     # Initialize the base model (will hold default/global transitions)
     base_model = CompartmentalModel(compartments=compartments, parameters=global_params, transitions=transitions)
@@ -136,8 +140,13 @@ def run_simulation(
     # Set up logger
     logger = setup_logger(model_name, config, num_patches, patches, net.base_model)
 
+    # Validate and construct time range
+    t_max = config.get("TMax")
+    if not isinstance(t_max, int) or t_max <= 0:
+        raise ValueError("'TMax' must be a positive integer.")
+    t_range = np.arange(t_max, dtype=float)
+
     # Run simulation
-    t_range = np.linspace(0, config["TMax"] - 1, int(config["TMax"]))
     model = Model(net, compartments=list(net.base_model.compartments))
     out_ode = model.solve(y0, t_range)
 
