@@ -37,7 +37,7 @@ class CompartmentalModel:
                 scope = {**params, **state}
                 try:
                     rate_val = eval(rate_expr, {"__builtins__": {}}, scope)
-                except (KeyError, NameError, ValueError) as e:
+                except (KeyError, NameError, ValueError, SyntaxError, TypeError, ZeroDivisionError) as e:
                     msg = f"Invalid rate expression '{rate_expr}' in transition '{transition_label}': {e}"
                     raise ValueError(msg) from e
             else:
@@ -112,10 +112,11 @@ class NetworkModel:
             # Get state for this patch
             patch_state = self.get_patch_state(state, i)
 
-            # Get rates for this patch (use fallback to dict order if patch_names not available)
+            # Resolve patch parameters using canonical patch ordering when available.
             if hasattr(self, "patch_parameters"):
-                patch_names = list(self.patch_parameters.keys())
-                patch_name = patch_names[i] if i < len(patch_names) else None
+                patch_name = None
+                if hasattr(self, "patch_names") and i < len(self.patch_names):
+                    patch_name = self.patch_names[i]
                 patch_params = {**self.base_model.parameters, **self.patch_parameters.get(patch_name, {})}
             else:
                 patch_params = self.base_model.parameters
@@ -130,8 +131,9 @@ class NetworkModel:
                 rate = rates[transition_label]
                 original_rate_expr = transition.get("rate", "")
 
-                # Apply network-mediated FOI to susceptible-to-infection transitions
-                infection_compartments = {"I", "E"}  # Common infection targets
+                # Apply network-mediated FOI to susceptible-to-infection transitions.
+                # Allow model-level override via `infection_compartments` attribute.
+                infection_compartments = set(getattr(self, "infection_compartments", {"I", "E"}))
                 is_infection_transition = source == "S" and target in infection_compartments
 
                 has_network = self.num_patches > 1 and hasattr(self, "network") and self.network is not None

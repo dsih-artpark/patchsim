@@ -23,7 +23,7 @@ def load_config(config_path: str) -> dict[str, Any]:
         config = yaml.safe_load(f)
 
     # Validate required fields
-    required_fields = ["PatchFile", "SeedFile", "OutputDir"]
+    required_fields = ["PatchFile", "SeedFile", "OutputDir", "Transitions", "TMax"]
     for field in required_fields:
         if field not in config:
             raise ValueError(f"Missing required field '{field}' in config")
@@ -69,8 +69,14 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
         network_matrix = np.zeros((num_patches, num_patches))
 
         for _, row in net_df.iterrows():
-            i = patch_idx[row["source"].strip('"')]
-            j = patch_idx[row["target"].strip('"')]
+            source = row["source"].strip('"')
+            target = row["target"].strip('"')
+            if source not in patch_idx:
+                raise ValueError(f"NetworkFile contains unknown source patch '{source}'")
+            if target not in patch_idx:
+                raise ValueError(f"NetworkFile contains unknown target patch '{target}'")
+            i = patch_idx[source]
+            j = patch_idx[target]
             if row["weight"] < 0:
                 raise ValueError(f"Network weight must be non-negative between {row['source']} and {row['target']}")
             network_matrix[i, j] = row["weight"]
@@ -121,6 +127,7 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
 
     # Attach per-patch parameters to the network model
     net.patch_parameters = patch_params
+    net.patch_names = patches
 
     return net, y0, patches, num_patches
 
@@ -160,7 +167,6 @@ def run_simulation(
     out_df.to_csv(csv_path, index=False)
     logger.info(f"Saved simulation output to {csv_path}")
 
-    # plot_patch_subplots(t_range, out_ode, patches, plots_dir, model_name)
     model.visualize(t_range, out_ode, patches, plots_dir, model_name)
 
     logger.info(f"Saved all patch subplots to {plots_dir}/patch_timeseries_{model_name}_ode.png")
