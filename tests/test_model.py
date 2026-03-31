@@ -1,12 +1,13 @@
-from patchsim.core.model import CompartmentalModel, NetworkModel
-import numpy as np
 import pytest
+
+from patchsim.core.model import CompartmentalModel, NetworkModel
+
 
 def test_compute_rates_with_parameters():
     compartments = ["S", "I", "R"]
     transitions = [
         {"transition": "S->I", "rate": "beta * S * I / (S + I + R)"},
-        {"transition": "I->R", "rate": "gamma * I"}
+        {"transition": "I->R", "rate": "gamma * I"},
     ]
     params = {"beta": 0.5, "gamma": 0.1}
     model = CompartmentalModel(compartments=compartments, parameters=params, transitions=transitions)
@@ -14,8 +15,6 @@ def test_compute_rates_with_parameters():
     state = {"S": 1000.0, "I": 10.0, "R": 0.0}
     rates = model.compute_rates(state)
     # expected infection rate per susceptible: beta * S * I / N  => numeric value
-    N = sum(state.values())
-    expected_inf_rate = (0.5 * state["S"] * state["I"] / N) * state["S"]
     # check keys present
     assert "S->I" in rates
     assert "I->R" in rates
@@ -23,11 +22,12 @@ def test_compute_rates_with_parameters():
     assert rates["S->I"] > 0
     assert rates["I->R"] == pytest.approx(0.1 * state["I"])
 
+
 def test_networkmodel_derivatives_conserve_population():
     compartments = ["S", "I", "R"]
     transitions = [
         {"transition": "S->I", "rate": "beta * S * I / (S + I + R)"},
-        {"transition": "I->R", "rate": "gamma * I"}
+        {"transition": "I->R", "rate": "gamma * I"},
     ]
     params = {"beta": 0.5, "gamma": 0.1}
     base = CompartmentalModel(compartments=compartments, parameters=params, transitions=transitions)

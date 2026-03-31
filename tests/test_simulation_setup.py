@@ -1,8 +1,9 @@
-from patchsim.core.simulation import setup_simulation, load_config
 import pandas as pd
-import numpy as np
 import pytest
 import yaml
+
+from patchsim.core.simulation import load_config, setup_simulation
+
 
 def test_setup_simulation_returns_objects(tmp_data_dir):
     cfg = load_config(tmp_data_dir["config"])
@@ -14,9 +15,9 @@ def test_setup_simulation_returns_objects(tmp_data_dir):
     assert "S_0" in y0 and "I_1" in y0
     assert patches == ["A", "B"]
 
+
 def test_setup_simulation_population_check(tmp_data_dir):
     # mutate seed so it doesn't sum to population to trigger error
-    import pandas as pd
     seed_df = pd.read_csv(tmp_data_dir["seed_csv"])
     seed_df.loc[0, "S"] = 500  # break conservation for PatchA
     seed_df.to_csv(tmp_data_dir["seed_csv"], index=False)

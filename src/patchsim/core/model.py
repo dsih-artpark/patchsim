@@ -1,10 +1,12 @@
 """
 Core model implementation for compartmental models.
 """
-from typing import Any, Callable, Dict, List
+
 import re
+from typing import Any, Callable, Dict
+
 from scipy.integrate import odeint
-import numpy as np
+
 
 class CompartmentalModel:
     """Base class for compartmental models."""
@@ -19,9 +21,9 @@ class CompartmentalModel:
         """Compute transition rates for each compartment."""
         rates = {}
         for transition in self.transitions:
-            transition_label = transition['transition']
+            transition_label = transition["transition"]
             source, target = [p.strip() for p in transition_label.split("->")]
-            rate = transition['rate']
+            rate = transition["rate"]
             rate_expr = rate
             # Handle rate expressions
             if isinstance(rate_expr, str):
@@ -67,7 +69,7 @@ class NetworkModel:
         Args:
             full_state: Current state of all compartments
             infected_compartment: Name of the compartment representing infected individuals
-        
+
         Returns:
             List of per-capita forces of infection (model_runner applies beta * FOI * S)
         """
@@ -104,12 +106,9 @@ class NetworkModel:
                 # get patch name using index (like PatchA, PatchB, etc.)
                 patch_names = list(self.patch_parameters.keys())
                 patch_name = patch_names[i] if i < len(patch_names) else None
-                patch_params = {
-                    **self.base_model.parameters,
-                    **self.patch_parameters.get(patch_name, {})
-                }
+                patch_params = {**self.base_model.parameters, **self.patch_parameters.get(patch_name, {})}
 
-                #patch_params = self.patch_parameters.get(patch_name, self.base_model.parameters)
+                # patch_params = self.patch_parameters.get(patch_name, self.base_model.parameters)
             else:
                 patch_params = self.base_model.parameters
 
@@ -121,7 +120,7 @@ class NetworkModel:
 
             # Update derivatives based on rates
             for transition in self.base_model.transitions:
-                transition_label = transition['transition']
+                transition_label = transition["transition"]
                 source, target = [p.strip() for p in transition_label.split("->")]
                 rate = rates[transition_label]
 
@@ -139,10 +138,7 @@ class NetworkModel:
 
         for _ in t_range[1:]:
             derivatives = self.compute_derivatives(state)
-            new_state = {
-                c: state[c] + derivatives[c]
-                for c in self.all_compartments
-            }
+            new_state = {c: state[c] + derivatives[c] for c in self.all_compartments}
             state = new_state
             for c in self.all_compartments:
                 history[c].append(state[c])
@@ -163,4 +159,3 @@ class NetworkModel:
         sol = integrator(rhs, y0, t_range)
         out = {c: sol[:, i] for i, c in enumerate(self.all_compartments)}
         return t_range, out
-    

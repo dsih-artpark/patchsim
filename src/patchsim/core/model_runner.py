@@ -1,5 +1,5 @@
-import numpy as np
 from scipy.integrate import odeint
+
 
 class Model:
     """
@@ -28,7 +28,7 @@ class Model:
 
                 for key, rate in rates.items():
                     src, tgt = [p.strip() for p in key.split("->")]
-                    
+
                     # For S→I transitions, scale by network force of infection
                     if src == "S" and tgt == "I":
                         # rate from compute_rates is beta*S (before network scaling)
@@ -36,7 +36,7 @@ class Model:
                         adjusted_rate = beta * state[f"S_{i}"] * lambdas[i]
                     else:
                         adjusted_rate = rate
-                    
+
                     dydt[f"{src}_{i}"] -= adjusted_rate
                     dydt[f"{tgt}_{i}"] += adjusted_rate
 
@@ -52,4 +52,5 @@ class Model:
 
     def visualize(self, t, results, patches, outdir, model_name):
         from patchsim.utils.viz import plot_patch_subplots
+
         plot_patch_subplots(t, results, patches, outdir, model_name)

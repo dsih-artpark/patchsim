@@ -78,6 +78,9 @@ fixable = ["ALL"]
 [tool.ruff.lint.isort]
 known-first-party = ["patchsim"]
 
+[tool.ruff.lint.per-file-ignores]
+"src/patchsim/models/ka_fmd_sirsv_discrete.py" = ["E501", "E741"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/patchsim"]
 

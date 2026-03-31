@@ -1,8 +1,7 @@
-import yaml
 import pandas as pd
-import numpy as np
-import os
 import pytest
+import yaml
+
 
 @pytest.fixture
 def tmp_data_dir(tmp_path):
@@ -16,30 +15,17 @@ def tmp_data_dir(tmp_path):
     seed_folder.mkdir()
 
     # sample patch CSV
-    patch_df = pd.DataFrame({
-        "patch": ["A", "B"],
-        "Population": [1000, 800]
-    })
+    patch_df = pd.DataFrame({"patch": ["A", "B"], "Population": [1000, 800]})
     patch_csv = patch_folder / "sample-patch.csv"
     patch_df.to_csv(patch_csv, index=False)
 
     # sample seed CSV (S, I, R columns)
-    seed_df = pd.DataFrame({
-        "patch": ["A", "B"],
-        "S": [990, 795],
-        "I": [10, 5],
-        "R": [0, 0]
-    })
+    seed_df = pd.DataFrame({"patch": ["A", "B"], "S": [990, 795], "I": [10, 5], "R": [0, 0]})
     seed_csv = seed_folder / "sample-seed.csv"
     seed_df.to_csv(seed_csv, index=False)
 
     # sample network CSV (day, source, target, weight)
-    net_df = pd.DataFrame({
-        "day": [0, 0],
-        "source": ["A", "B"],
-        "target": ["B", "A"],
-        "weight": [0.1, 0.1]
-    })
+    net_df = pd.DataFrame({"day": [0, 0], "source": ["A", "B"], "target": ["B", "A"], "weight": [0.1, 0.1]})
     net_csv = net_folder / "sample-net.csv"
     net_df.to_csv(net_csv, index=False)
 
@@ -53,12 +39,9 @@ def tmp_data_dir(tmp_path):
         "compartments": ["S", "I", "R"],
         "PatchParameters": [
             {"patch": "A", "parameters": {"beta": 0.5, "gamma": 0.1}},
-            {"patch": "B", "parameters": {"beta": 0.3, "gamma": 0.08}}
+            {"patch": "B", "parameters": {"beta": 0.3, "gamma": 0.08}},
         ],
-        "Transitions": {
-            "S -> I": "beta * S * I / (S + I + R)",
-            "I -> R": "gamma * I"
-        }
+        "Transitions": {"S -> I": "beta * S * I / (S + I + R)", "I -> R": "gamma * I"},
     }
     config_path = tmp_path / "config.yaml"
     with open(config_path, "w") as f:

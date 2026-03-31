@@ -1,6 +1,7 @@
-from patchsim.core.simulation import load_config
 import pytest
-import os
+
+from patchsim.core.simulation import load_config
+
 
 def test_load_config_success(tmp_path):
     cfg_file = tmp_path / "c.yaml"
@@ -8,6 +9,7 @@ def test_load_config_success(tmp_path):
     cfg = load_config(str(cfg_file))
     assert "PatchFile" in cfg
     assert cfg["OutputDir"] == "out"
+
 
 def test_load_config_missing_field(tmp_path):
     cfg_file = tmp_path / "bad.yaml"

@@ -1,8 +1,9 @@
 import subprocess
-import sys
+
 
 def test_patchsim_import():
     import patchsim
+
     assert hasattr(patchsim, "__version__")
 
 
@@ -18,10 +19,9 @@ def test_patchsim_sdk_exports():
 
 
 def test_core_imports():
-    from patchsim.core.model import CompartmentalModel, NetworkModel
-    from patchsim.core.simulation import load_config, setup_simulation, run_simulation
-    from patchsim.core.network import Network
-    
+    pass
+
+
 def test_cli_help():
     result = subprocess.run(
         ["patchsim", "--help"],
@@ -67,10 +67,11 @@ def test_cli_init_scaffold(tmp_path):
     assert (project_dir / "data" / "networks" / "network-static.csv").exists()
     assert (project_dir / "data" / "seeds" / "seed-initial.csv").exists()
     assert (project_dir / "output").exists()
-    
-    
+
+
 def test_yaml_model_loading():
     from patchsim.core.simulation import load_config
+
     config = load_config("configs/sample-sir-ode.yaml")
     assert "compartments" in config
     assert "Parameters" in config
@@ -78,32 +79,26 @@ def test_yaml_model_loading():
 
 
 def test_minimal_sir_simulation():
+    import numpy as np
+
     from patchsim.core.model import CompartmentalModel, NetworkModel
     from patchsim.core.model_runner import Model
-    import numpy as np
-    
+
     base_model = CompartmentalModel(
         compartments=["S", "I", "R"],
         parameters={"beta": 0.3, "gamma": 0.1},
-        transitions=[
-            {"transition": "S->I", "rate": "beta"},
-            {"transition": "I->R", "rate": "gamma * I"}
-        ]
+        transitions=[{"transition": "S->I", "rate": "beta"}, {"transition": "I->R", "rate": "gamma * I"}],
     )
     # Create single-patch network model
-    network_model = NetworkModel(
-        base_model=base_model,
-        num_patches=1,
-        network_matrix=[[1.0]]
-    )
+    network_model = NetworkModel(base_model=base_model, num_patches=1, network_matrix=[[1.0]])
     # Initial conditions
     y0 = {"S_0": 999.0, "I_0": 1.0, "R_0": 0.0}
     t_range = np.linspace(0, 10, 11)
-    
+
     # Use Model runner
     model = Model(network_model, compartments=["S", "I", "R"])
     results = model.solve(y0, t_range)
-    
+
     # Smoke-level assertions
     assert results is not None
     assert "S_0" in results

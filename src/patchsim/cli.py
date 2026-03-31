@@ -1,12 +1,12 @@
 import argparse
-from importlib import resources
 import logging
-from pathlib import Path
 import shutil
 import textwrap
+from importlib import resources
+from pathlib import Path
 
-from patchsim.core.simulation import load_config, run_simulation, setup_simulation
 from patchsim import __version__
+from patchsim.core.simulation import load_config, run_simulation, setup_simulation
 
 
 def _configure_logging() -> None:
@@ -28,7 +28,7 @@ def _cmd_run(config_path: str) -> None:
     logging.info("Starting PatchSim simulation...")
     config = load_config(config_path)
     net, y0, patches, num_patches = setup_simulation(config)
-    run_simulation(config, config['ModelName'], net, y0, patches, num_patches)
+    run_simulation(config, config["ModelName"], net, y0, patches, num_patches)
     logging.info("Simulation completed successfully.")
 
 
@@ -93,8 +93,7 @@ def main():
 
     parser = argparse.ArgumentParser(
         description=(
-            "PatchSim: A modular metapopulation simulation framework for multi-disease "
-            "epidemiological modelling."
+            "PatchSim: A modular metapopulation simulation framework for multi-disease epidemiological modelling."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent("""
@@ -103,7 +102,7 @@ Examples:
     patchsim run -c my-project/config.yaml
     patchsim validate -c my-project/config.yaml
     patchsim list-models
-        """)
+        """),
     )
     parser.add_argument("--version", action="version", version=f"patchsim {__version__}")
 

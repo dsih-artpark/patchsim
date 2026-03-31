@@ -14,11 +14,11 @@ except PackageNotFoundError:  # pragma: no cover - local editable fallback
     __version__ = "0.0.0"
 
 __all__ = [
-    "__version__",
     "CompartmentalModel",
     "NetworkModel",
+    "__version__",
     "load_config",
-    "setup_simulation",
-    "run_simulation",
     "plot_patch_subplots",
+    "run_simulation",
+    "setup_simulation",
 ]
