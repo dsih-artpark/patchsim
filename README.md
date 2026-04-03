@@ -89,26 +89,26 @@ uv pip install -e .[dev]
 
 ### Command Line Interface
 
-PatchSim provides a subcommand-based CLI:
+PatchSim provides a subcommand-based CLI. Always run using `uv run` to ensure correct dependency resolution:
 
 ```bash
 # Show help and available options
-patchsim --help
+uv run patchsim --help
 
 # Show package version
-patchsim --version
+uv run patchsim --version
 
 # Initialize a new self-contained project
-patchsim init my-project
+uv run patchsim init my-project
 
 # Validate config without running
-patchsim validate -c my-project/config.yaml
+uv run patchsim validate -c my-project/config.yaml
 
 # Run simulation
-patchsim run -c my-project/config.yaml
+uv run patchsim run -c my-project/config.yaml
 
 # List built-in models
-patchsim list-models
+uv run patchsim list-models
 ```
 
 ### Python SDK

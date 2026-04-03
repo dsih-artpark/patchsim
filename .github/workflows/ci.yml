@@ -3,15 +3,11 @@ name: CI
 on:
   push:
     branches: [main, feature, dev, develop]
-  pull_request:
+  pull_request: null
 
 jobs:
   test-and-lint:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.11", "3.12", "3.13"]
 
     steps:
       - name: Checkout
@@ -23,19 +19,19 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version-file: .python-version
 
       - name: Sync dependencies (including dev)
-        run: uv sync --extra dev
+        run: uv sync --extra dev --frozen
 
       - name: Ruff lint
-        run: uv run ruff check .
+        run: uv run --no-sync --frozen ruff check .
 
       - name: Ruff format check
-        run: uv run ruff format --check .
+        run: uv run --no-sync --frozen ruff format --check .
 
       - name: Run tests
-        run: uv run pytest -q
+        run: uv run --no-sync --frozen pytest -q
 
   build:
     runs-on: ubuntu-latest
@@ -51,7 +47,10 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version-file: .python-version
+
+      - name: Sync dependencies
+        run: uv sync --frozen
 
       - name: Build package
         run: uv build

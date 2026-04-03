@@ -3,7 +3,7 @@ name: Publish to PyPI
 on:
   release:
     types: [published]
-  workflow_dispatch:
+  workflow_dispatch: null
 
 jobs:
   publish:
@@ -25,19 +25,19 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version-file: .python-version
 
       - name: Sync dependencies (including dev)
-        run: uv sync --extra dev
+        run: uv sync --extra dev --frozen
 
       - name: Lint
-        run: uv run ruff check .
+        run: uv run --no-sync --frozen ruff check .
 
       - name: Format check
-        run: uv run ruff format --check .
+        run: uv run --no-sync --frozen ruff format --check .
 
       - name: Test
-        run: uv run pytest -q
+        run: uv run --no-sync --frozen pytest -q
 
       - name: Build
         run: uv build

@@ -114,10 +114,10 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent("""
 Examples:
-    patchsim init my-project
-    patchsim run -c my-project/config.yaml
-    patchsim validate -c my-project/config.yaml
-    patchsim list-models
+    uv run patchsim init my-project
+    uv run patchsim run -c my-project/config.yaml
+    uv run patchsim validate -c my-project/config.yaml
+    uv run patchsim list-models
         """),
     )
     parser.add_argument("--version", action="version", version=f"patchsim {__version__}")
