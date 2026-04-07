@@ -1,0 +1,31 @@
+# -----------------------------------------------------------------------------
+# PatchSim project configuration
+# -----------------------------------------------------------------------------
+# This project was created by: patchsim init {{PROJECT_NAME}}
+
+# Input files (relative to this config file)
+PatchFile: data/patch/patch-population.csv
+NetworkFile: data/networks/network-static.csv
+SeedFile: data/seeds/seed-initial.csv
+Logging: False
+
+# Model configuration
+ModelName: {{PROJECT_NAME}}
+
+# Simulation parameters
+TMax: 60
+Tolerance: 1e-8
+MaxIter: 10000
+StartDate: 2020-01-01
+EndDate: 2022-12-31
+OutputDir: output/{{PROJECT_NAME}}
+compartments: ["S", "I", "R"]
+
+# Global model parameters
+Parameters:
+  beta: 0.08
+  gamma: 0.10
+
+# Transition map (required format)
+# Use arrow notation only: X -> Y
+Transitions: {S -> I: "beta", I -> R: "gamma * I"}

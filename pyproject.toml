@@ -1,10 +1,31 @@
+[build-system]
+requires = ["hatchling>=1.25.0"]
+build-backend = "hatchling.build"
+
 [project]
 name = "patchsim"
-version = "0.1.0"
+version = "0.1.0b1"
 description = "A modular simulation framework for patch-based metapopulation epidemiology"
 readme = "README.md"
 requires-python = ">=3.11"
-license = {text = "GPL-3.0"}
+license = { text = "GPL-3.0" }
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+]
+
+authors = [
+    { name = "Adish Assain", email = "adish@artpark.in" },
+    { name = "Sneha S", email = "sneha@artpark.in" },
+    { name = "Shreya Mukherjee", email = "shreyamukherjee@artpark.in" }
+]
 
 dependencies = [
     "numpy",
@@ -15,27 +36,32 @@ dependencies = [
     "tqdm",
     "networkx",
     "SALib",
-]
-authors = [
-    {name = "Adish Assain", email = "adish@artpark.in"},
-    {name = "Sneha S", email = "sneha@artpark.in"},
+    "rich>=14.3.3",
 ]
 
-[dependency-groups]
+[project.urls]
+Homepage = "https://github.com/dsih-artpark/patchsim"
+Repository = "https://github.com/dsih-artpark/patchsim"
+Documentation = "https://dsih-artpark.github.io/patchsim/"
+
+[project.optional-dependencies]
 dev = [
     "pytest>=8.3.5",
+    "pytest-cov",
     "ruff",
     "mypy",
-    "pytest-cov",
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.6.12",
     "mkdocstrings[python]>=0.29.1",
+    "rich>=13.0.0",
+    "pre-commit>=3.0.0"
 ]
+
 notebook = [
     "jupyter",
     "seaborn",
     "plotly",
-    "ipywidgets",
+    "ipywidgets"
 ]
 
 [project.scripts]
@@ -43,15 +69,28 @@ patchsim = "patchsim.cli:main"
 
 [tool.ruff]
 line-length = 120
-target-version = "py39"
-select = ["E", "F", "W", "I", "FLY", "RUF", "B", "ICN"]
-fixable = ["ALL"]
-unfixable = []
+target-version = "py311"
 
-[tool.ruff.isort]
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "RUF"]
+fixable = ["ALL"]
+
+[tool.ruff.lint.isort]
 known-first-party = ["patchsim"]
 
+[tool.ruff.lint.per-file-ignores]
+"src/patchsim/models/ka_fmd_sirsv_discrete.py" = ["E501", "E741"]
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+[tool.hatch.build.targets.wheel]
+packages = ["src/patchsim"]
+include = [
+    { path = "src/patchsim/templates", from = "." },
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src/patchsim/**",
+    "/src/patchsim/templates/**",
+    "/README.md",
+    "/LICENSE",
+]

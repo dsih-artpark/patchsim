@@ -17,12 +17,12 @@ def setup_logger(model_name, config, num_patches, patches, base_model):
     Returns:
         logging.Logger: Configured logger.
     """
-    log_dir = os.path.join(config['OutputDir'], "logs")
+    log_dir = os.path.join(config["OutputDir"], "logs")
     os.makedirs(log_dir, exist_ok=True)
     log_file = os.path.join(log_dir, f"{model_name}_run_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
     logger = logging.getLogger("PatchSimLogger")
     logger.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+    formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
     fh = logging.FileHandler(log_file)
     fh.setFormatter(formatter)
     logger.handlers = []
@@ -32,6 +32,18 @@ def setup_logger(model_name, config, num_patches, patches, base_model):
     logger.info(f"Python version: {sys.version}")
     logger.info(f"Platform: {platform.platform()}")
     logger.info(f"Parameters: {base_model.parameters}")
+    # log per-patch parameters if defined
+    if "PatchParameters" in config:
+        logger.info("Per-patch parameter overrides detected:")
+        for idx, entry in enumerate(config["PatchParameters"]):
+            if not isinstance(entry, dict):
+                logger.warning(f"  PatchParameters[{idx}] is not a mapping: {entry!r}")
+                continue
+            patch = entry.get("patch", f"<missing-patch-{idx}>")
+            params = entry.get("parameters", {})
+            logger.info(f"  {patch}: {params}")
+    else:
+        logger.info("No per-patch parameter overrides provided.")
     # Parameter agnostic positivity check
     for param, value in base_model.parameters.items():
         try:
