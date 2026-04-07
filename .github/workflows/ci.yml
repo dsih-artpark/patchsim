@@ -53,4 +53,4 @@ jobs:
         run: uv sync --frozen
 
       - name: Build package
-        run: uv build --no-sync --frozen
+        run: uv build
