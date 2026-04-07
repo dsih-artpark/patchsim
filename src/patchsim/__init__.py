@@ -11,7 +11,7 @@ from patchsim.utils.viz import plot_patch_subplots
 try:
     __version__ = version("patchsim")
 except PackageNotFoundError:  # pragma: no cover - local editable fallback
-    __version__ = "0.0.0"
+    __version__ = "0.1.0b1"
 
 __all__ = [
     "CompartmentalModel",

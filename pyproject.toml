@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "patchsim"
-version = "0.1.0"
+version = "0.1.0b1"
 description = "A modular simulation framework for patch-based metapopulation epidemiology"
 readme = "README.md"
 requires-python = ">=3.11"
