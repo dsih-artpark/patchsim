@@ -107,7 +107,7 @@ uv run patchsim validate -c my-project/config.yaml
 # Run simulation
 uv run patchsim run -c my-project/config.yaml
 
-# List built-in models
+# List built-in model references and YAML templates
 uv run patchsim list-models
 ```
 

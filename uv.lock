@@ -1663,7 +1663,7 @@ wheels = [
 
 [[package]]
 name = "patchsim"
-version = "0.1.0"
+version = "0.1.0b1"
 source = { editable = "." }
 dependencies = [
     { name = "matplotlib" },
@@ -1700,26 +1700,26 @@ notebook = [
 requires-dist = [
     { name = "ipywidgets", marker = "extra == 'notebook'" },
     { name = "jupyter", marker = "extra == 'notebook'" },
-    { name = "matplotlib" },
+    { name = "matplotlib", specifier = ">=3.8" },
     { name = "mkdocs", marker = "extra == 'dev'", specifier = ">=1.6.1" },
     { name = "mkdocs-material", marker = "extra == 'dev'", specifier = ">=9.6.12" },
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'dev'", specifier = ">=0.29.1" },
     { name = "mypy", marker = "extra == 'dev'" },
-    { name = "networkx" },
-    { name = "numpy" },
-    { name = "pandas" },
+    { name = "networkx", specifier = ">=3.3" },
+    { name = "numpy", specifier = ">=1.26" },
+    { name = "pandas", specifier = ">=2.2" },
     { name = "plotly", marker = "extra == 'notebook'" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.5" },
     { name = "pytest-cov", marker = "extra == 'dev'" },
-    { name = "pyyaml" },
+    { name = "pyyaml", specifier = ">=6.0" },
     { name = "rich", specifier = ">=14.3.3" },
     { name = "rich", marker = "extra == 'dev'", specifier = ">=13.0.0" },
     { name = "ruff", marker = "extra == 'dev'" },
-    { name = "salib" },
-    { name = "scipy" },
+    { name = "salib", specifier = ">=1.5" },
+    { name = "scipy", specifier = ">=1.11" },
     { name = "seaborn", marker = "extra == 'notebook'" },
-    { name = "tqdm" },
+    { name = "tqdm", specifier = ">=4.66" },
 ]
 provides-extras = ["dev", "notebook"]
 

@@ -1,0 +1,10 @@
+# Built-in SEIR template
+compartments: ["S", "E", "I", "R"]
+Parameters:
+  beta: 0.25
+  sigma: 0.2
+  gamma: 0.1
+Transitions:
+  "S -> E": "beta"
+  "E -> I": "sigma * E"
+  "I -> R": "gamma * I"

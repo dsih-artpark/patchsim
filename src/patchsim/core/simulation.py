@@ -4,6 +4,8 @@ ODE and discrete simulation logic is implemented in core/model.py.
 """
 
 import os
+import re
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -19,14 +21,27 @@ EPSILON = 1e-6
 
 def load_config(config_path: str) -> dict[str, Any]:
     """Load and validate configuration file."""
-    with open(config_path) as f:
+    cfg_path = Path(config_path).expanduser().resolve()
+    with open(cfg_path, encoding="utf-8") as f:
         config = yaml.safe_load(f)
+
+    if not isinstance(config, dict):
+        raise ValueError("Configuration must be a YAML mapping at the top level")
 
     # Validate required fields
     required_fields = ["PatchFile", "SeedFile", "OutputDir", "Transitions", "TMax"]
     for field in required_fields:
         if field not in config:
             raise ValueError(f"Missing required field '{field}' in config")
+
+    # Resolve relative paths against the config file directory.
+    cfg_dir = cfg_path.parent
+    for key in ["PatchFile", "SeedFile", "NetworkFile", "OutputDir"]:
+        val = config.get(key)
+        if isinstance(val, str) and val.strip():
+            p = Path(val).expanduser()
+            if not p.is_absolute():
+                config[key] = str((cfg_dir / p).resolve())
 
     return config
 
@@ -44,7 +59,23 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
 
     # Load seed data
     seed_df = pd.read_csv(config["SeedFile"])
-    compartments = [col for col in seed_df.columns if col != "patch"]
+    seed_compartments = [col for col in seed_df.columns if col != "patch"]
+
+    configured_compartments = config.get("compartments", config.get("Compartments"))
+    if configured_compartments is None:
+        compartments = seed_compartments
+    else:
+        if not isinstance(configured_compartments, list) or not configured_compartments:
+            raise ValueError("'compartments' must be a non-empty list when provided")
+        compartments = [str(c) for c in configured_compartments]
+
+        missing_in_seed = sorted(set(compartments) - set(seed_compartments))
+        extra_in_seed = sorted(set(seed_compartments) - set(compartments))
+        if missing_in_seed or extra_in_seed:
+            raise ValueError(
+                "Compartment mismatch between config 'compartments' and SeedFile columns. "
+                f"Missing in SeedFile: {missing_in_seed}; Extra in SeedFile: {extra_in_seed}"
+            )
 
     for _, row in seed_df.iterrows():
         patch = row["patch"]
@@ -83,6 +114,14 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
 
     # Set up model
     global_params = config.get("Parameters", {})
+
+    # Collect per-patch parameters if provided (needed for transition-name validation too)
+    patch_params: dict[str, dict[str, Any]] = {}
+    if "PatchParameters" in config:
+        for entry in config["PatchParameters"]:
+            patch_name = entry["patch"]
+            patch_params[patch_name] = entry.get("parameters", {})
+
     transitions_cfg = config.get("Transitions", {})
     # Transitions must be provided as arrow-map syntax in config, e.g.:
     # Transitions: {S -> I: beta, I -> R: gamma * I}
@@ -90,18 +129,31 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
         raise ValueError("'Transitions' must be a non-empty mapping in arrow syntax, e.g. {S -> I: 'beta'}.")
 
     transitions: list[dict[str, Any]] = []
+    patch_param_names = set()
+    for per_patch in patch_params.values():
+        patch_param_names |= set(per_patch.keys())
+    allowed_names = set(compartments) | set(global_params.keys()) | patch_param_names
     for k, v in transitions_cfg.items():
         parts = [p.strip() for p in str(k).split("->")]
         if len(parts) != 2 or not all(parts):
             raise ValueError(f"Invalid transition key '{k}'. Use 'S -> I' format.")
-        transitions.append({"transition": f"{parts[0]}->{parts[1]}", "rate": v})
+        source, target = parts[0], parts[1]
+        if source not in compartments or target not in compartments:
+            raise ValueError(
+                f"Transition '{k}' references unknown compartments. Known compartments: {sorted(compartments)}"
+            )
 
-    # Collect per-patch parameters if provided
-    patch_params: dict[str, dict[str, Any]] = {}
-    if "PatchParameters" in config:
-        for entry in config["PatchParameters"]:
-            patch_name = entry["patch"]
-            patch_params[patch_name] = entry.get("parameters", {})
+        if isinstance(v, str):
+            identifiers = set(re.findall(r"[A-Za-z_]\w*", v))
+            python_keywords = {"and", "or", "not", "True", "False", "None"}
+            unknown_identifiers = sorted(identifiers - allowed_names - python_keywords)
+            if unknown_identifiers:
+                raise ValueError(
+                    f"Transition '{k}' uses unknown names in expression '{v}': {unknown_identifiers}. "
+                    f"Allowed names are compartments + Parameters keys: {sorted(allowed_names)}"
+                )
+
+        transitions.append({"transition": f"{source}->{target}", "rate": v})
 
     # Validate that all configured patches exist in PatchFile
     unknown_patches = set(patch_params) - set(patches)

@@ -85,11 +85,17 @@ def _cmd_init(name: str, force: bool = False) -> None:
 
 def _list_builtin_models() -> list[str]:
     models_dir = Path(__file__).resolve().parent / "models"
-    models = []
+    models: list[str] = []
     for f in sorted(models_dir.glob("*.py")):
         if f.name == "__init__.py":
             continue
-        models.append(f.stem)
+        models.append(f"{f.stem} (python)")
+
+    templates_dir = resources.files("patchsim").joinpath("templates", "models")
+    if templates_dir.is_dir():
+        for f in sorted(templates_dir.iterdir(), key=lambda x: x.name):
+            if f.name.endswith((".yaml", ".yml")):
+                models.append(f"{Path(f.name).stem} (yaml-template)")
     return models
 
 
@@ -98,7 +104,7 @@ def _cmd_list_models() -> None:
     if not models:
         logging.info("No built-in models found.")
         return
-    logging.info("Built-in models:")
+    logging.info("Built-in models and templates:")
     for model in models:
         logging.info("- %s", model)
 

@@ -55,3 +55,17 @@ To create a new model:
 
 For most use cases, users are encouraged to prefer
 **YAML-based model definitions** over Python scripts.
+
+---
+
+## Built-in YAML templates
+
+PatchSim now ships starter templates that can be discovered via:
+
+- `uv run patchsim list-models`
+
+Available templates:
+
+- `sir` (yaml-template)
+- `seir` (yaml-template)
+- `sirs` (yaml-template)

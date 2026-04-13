@@ -2,13 +2,6 @@
 
 This module provides various utility functions used across PatchSim for input/output handling, logging, and visualisation.
 
-## Input Handling
-
-Handles reading, parsing, and setting up configuration, network, and input files.  
-Also includes random seed initialisation utilities.
-
-::: patchsim.utils.loader
-
 ## Logger
 
 Provides a logging setup for the simulation runs.
