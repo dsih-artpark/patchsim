@@ -61,6 +61,7 @@ nav:
   - Home: index.md
   - Getting Started: getting-started.md
   - Configuration: configuration.md
+  - CLI Reference: cli-reference.md
   - Architecture: architecture.md
   - Mathematical Model: mathematical-model.md
   - Rate Multiplication: rate-multiplication.md
@@ -69,8 +70,6 @@ nav:
   - Results: results.md
   - References: 
       - Core: reference/core.md
-      - Models: reference/models.md
-      - Utils: reference/utils.md
 extra:
   social:
     - icon: fontawesome/brands/github
