@@ -19,6 +19,127 @@ from patchsim.utils.logger import setup_logger
 EPSILON = 1e-6
 
 
+MODEL_TEMPLATE_CONFIGS: dict[str, dict[str, Any]] = {
+    "sir": {
+        "compartments": ["S", "I", "R"],
+        "Parameters": {"beta": 0.08, "gamma": 0.1},
+        "Transitions": {"S -> I": "beta", "I -> R": "gamma * I"},
+    },
+    "seir": {
+        "compartments": ["S", "E", "I", "R"],
+        "Parameters": {"beta": 0.08, "sigma": 0.2, "gamma": 0.1},
+        "Transitions": {"S -> E": "beta", "E -> I": "sigma * E", "I -> R": "gamma * I"},
+    },
+    "sirs": {
+        "compartments": ["S", "I", "R"],
+        "Parameters": {"beta": 0.08, "gamma": 0.1, "waning": 0.02},
+        "Transitions": {"S -> I": "beta", "I -> R": "gamma * I", "R -> S": "waning * R"},
+    },
+    "sis": {
+        "compartments": ["S", "I"],
+        "Parameters": {"beta": 0.08, "gamma": 0.1},
+        "Transitions": {"S -> I": "beta", "I -> S": "gamma * I"},
+    },
+}
+
+
+def get_config_schema() -> dict[str, Any]:
+    """Return the JSON Schema for PatchSim configuration files."""
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://dsih-artpark.github.io/patchsim/config.schema.json",
+        "title": "PatchSim configuration",
+        "type": "object",
+        "required": ["PatchFile", "SeedFile", "OutputDir", "Transitions", "TMax"],
+        "properties": {
+            "PatchFile": {"type": "string"},
+            "SeedFile": {"type": "string"},
+            "NetworkFile": {"type": ["string", "null"]},
+            "OutputDir": {"type": "string"},
+            "ModelName": {"type": "string"},
+            "TMax": {"type": "integer", "minimum": 1},
+            "Tolerance": {"type": ["number", "string"]},
+            "MaxIter": {"type": "integer", "minimum": 1},
+            "StartDate": {"type": ["string", "null"]},
+            "EndDate": {"type": ["string", "null"]},
+            "Logging": {"type": ["boolean", "string"]},
+            "compartments": {
+                "type": "array",
+                "items": {"type": "string"},
+                "minItems": 1,
+            },
+            "Compartments": {
+                "type": "array",
+                "items": {"type": "string"},
+                "minItems": 1,
+            },
+            "Parameters": {
+                "type": "object",
+                "additionalProperties": {"type": ["number", "integer", "string", "boolean"]},
+            },
+            "PatchParameters": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "required": ["patch"],
+                    "properties": {
+                        "patch": {"type": "string"},
+                        "parameters": {"type": "object"},
+                    },
+                    "additionalProperties": True,
+                },
+            },
+            "Transitions": {
+                "type": "object",
+                "minProperties": 1,
+                "additionalProperties": {"type": "string"},
+            },
+        },
+        "additionalProperties": True,
+    }
+
+
+def get_model_catalog() -> list[dict[str, str]]:
+    """Return built-in model references and YAML templates for the CLI."""
+    catalog: list[dict[str, str]] = [
+        {"name": "ka_fmd_sirsv_discrete", "kind": "python"},
+    ]
+    for template_name in sorted(MODEL_TEMPLATE_CONFIGS):
+        catalog.append({"name": template_name, "kind": "yaml-template"})
+    return catalog
+
+
+def get_available_template_names() -> list[str]:
+    """Return the built-in starter template names."""
+    return sorted(MODEL_TEMPLATE_CONFIGS)
+
+
+def get_init_template_config(template_name: str, project_name: str) -> dict[str, Any]:
+    """Return a starter project config for the requested template."""
+    try:
+        template = MODEL_TEMPLATE_CONFIGS[template_name]
+    except KeyError as e:
+        raise ValueError(
+            f"Unknown template '{template_name}'. Available templates: {sorted(MODEL_TEMPLATE_CONFIGS)}"
+        ) from e
+
+    config: dict[str, Any] = {
+        "PatchFile": "data/patch/patch-population.csv",
+        "NetworkFile": "data/networks/network-static.csv",
+        "SeedFile": "data/seeds/seed-initial.csv",
+        "Logging": False,
+        "ModelName": project_name,
+        "TMax": 60,
+        "Tolerance": 1e-8,
+        "MaxIter": 10000,
+        "StartDate": "2020-01-01",
+        "EndDate": "2022-12-31",
+        "OutputDir": f"output/{project_name}",
+    }
+    config.update(template)
+    return config
+
+
 def load_config(config_path: str) -> dict[str, Any]:
     """Load and validate configuration file."""
     cfg_path = Path(config_path).expanduser().resolve()
@@ -186,8 +307,12 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
 
 def run_simulation(
     config: dict[str, Any], model_name: str, net: NetworkModel, y0: dict[str, float], patches: list, num_patches: int
-) -> None:
-    """Run the simulation and save results."""
+) -> dict[str, Any]:
+    """Run the simulation and save results.
+
+    Returns:
+        A summary dictionary describing the generated artifacts.
+    """
     # Create output directories
     for subdir in ["plots", "runs"]:
         dir_path = os.path.join(config["OutputDir"], subdir)
@@ -221,4 +346,15 @@ def run_simulation(
 
     model.visualize(t_range, out_ode, patches, plots_dir, model_name)
 
-    logger.info(f"Saved all patch subplots to {plots_dir}/patch_timeseries_{model_name}_ode.png")
+    plot_path = os.path.join(plots_dir, f"patch_timeseries_{model_name}_ode.png")
+    logger.info(f"Saved all patch subplots to {plot_path}")
+
+    return {
+        "model_name": model_name,
+        "output_dir": config["OutputDir"],
+        "csv_path": csv_path,
+        "plot_path": plot_path,
+        "num_patches": num_patches,
+        "patches": patches,
+        "t_max": t_max,
+    }

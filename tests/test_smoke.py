@@ -1,3 +1,4 @@
+import json
 import subprocess
 
 
@@ -52,6 +53,43 @@ def test_cli_list_models():
     output = (result.stdout + result.stderr).lower()
     assert "ka_fmd_sirsv_discrete" in output
     assert "sir (yaml-template)" in output
+    assert "sis (yaml-template)" in output
+
+
+def test_cli_list_models_json():
+    result = subprocess.run(
+        ["patchsim", "list-models", "--json"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    payload = json.loads(result.stdout)
+    assert any(item["name"] == "sir" and item["kind"] == "yaml-template" for item in payload["models"])
+
+
+def test_cli_validate_schema():
+    result = subprocess.run(
+        ["patchsim", "validate", "--schema"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    schema = json.loads(result.stdout)
+    assert schema["title"] == "PatchSim configuration"
+
+
+def test_cli_init_template_scaffold(tmp_path):
+    project_dir = tmp_path / "template-project"
+    result = subprocess.run(
+        ["patchsim", "init", str(project_dir), "--template", "seir"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+
+    config_text = (project_dir / "config.yaml").read_text(encoding="utf-8")
+    assert "E" in config_text
+    assert "S -> E" in config_text
 
 
 def test_cli_init_scaffold(tmp_path):

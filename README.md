@@ -101,14 +101,29 @@ uv run patchsim --version
 # Initialize a new self-contained project
 uv run patchsim init my-project
 
+# Initialize with a starter template
+uv run patchsim init my-project --template seir
+
 # Validate config without running
 uv run patchsim validate -c my-project/config.yaml
+
+# Print the JSON Schema for configs
+uv run patchsim validate --schema
+
+# Emit machine-readable JSON output
+uv run patchsim validate -c my-project/config.yaml --json
 
 # Run simulation
 uv run patchsim run -c my-project/config.yaml
 
+# Run and emit machine-readable JSON output
+uv run patchsim run -c my-project/config.yaml --json
+
 # List built-in model references and YAML templates
 uv run patchsim list-models
+
+# List models as JSON
+uv run patchsim list-models --json
 ```
 
 ### Python SDK
