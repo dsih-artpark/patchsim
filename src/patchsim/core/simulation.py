@@ -147,13 +147,22 @@ def load_config(config_path: str) -> dict[str, Any]:
         config = yaml.safe_load(f)
 
     if not isinstance(config, dict):
-        raise ValueError("Configuration must be a YAML mapping at the top level")
+        raise ValueError(
+            f"Configuration error in {cfg_path}: expected YAML mapping (key-value pairs), "
+            "but got a list or scalar value instead. \n"
+            "Ensure the config file has the format: key1: value1\\n  key2: value2"
+        )
 
     # Validate required fields
     required_fields = ["PatchFile", "SeedFile", "OutputDir", "Transitions", "TMax"]
     for field in required_fields:
         if field not in config:
-            raise ValueError(f"Missing required field '{field}' in config")
+            available = ", ".join(sorted(config.keys()))
+            raise ValueError(
+                f"Configuration error: missing required field '{field}'.\n"
+                f"Available fields in config: {available}\n"
+                f"Please add '{field}' to your config file."
+            )
 
     # Resolve relative paths against the config file directory.
     cfg_dir = cfg_path.parent
@@ -176,7 +185,11 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
 
     for p, pop in populations.items():
         if pop <= 0:
-            raise ValueError(f"Population for patch {p} must be positive")
+            raise ValueError(
+                f"Invalid population in {config['PatchFile']}: patch '{p}' has population {pop}.\n"
+                "Population must be a positive number (> 0).\n"
+                "Please correct the population value in your patch file."
+            )
 
     # Load seed data
     seed_df = pd.read_csv(config["SeedFile"])
@@ -194,19 +207,36 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
         extra_in_seed = sorted(set(seed_compartments) - set(compartments))
         if missing_in_seed or extra_in_seed:
             raise ValueError(
-                "Compartment mismatch between config 'compartments' and SeedFile columns. "
-                f"Missing in SeedFile: {missing_in_seed}; Extra in SeedFile: {extra_in_seed}"
+                f"Compartment mismatch between config and SeedFile ({config['SeedFile']}).\n"
+                f"Config compartments: {sorted(compartments)}\n"
+                f"SeedFile columns: {seed_compartments}\n"
+                f"Missing in SeedFile: {missing_in_seed}\n"
+                f"Extra in SeedFile: {extra_in_seed}\n"
+                "Please ensure the SeedFile has columns matching your config compartments."
             )
 
     for _, row in seed_df.iterrows():
         patch = row["patch"]
         if patch not in populations:
-            raise ValueError(f"SeedFile contains unknown patch '{patch}' not present in PatchFile")
+            raise ValueError(
+                f"Unknown patch '{patch}' in SeedFile ({config['SeedFile']}).\n"
+                f"Known patches from PatchFile: {sorted(populations.keys())}\n"
+                "Please ensure all patches in SeedFile match PatchFile."
+            )
         total = sum(row[c] for c in compartments)
         if not all(row[c] >= 0 for c in compartments):
-            raise ValueError(f"Seed values must be non-negative for patch {patch}")
+            neg_comps = [c for c in compartments if row[c] < 0]
+            raise ValueError(
+                f"Invalid seed data for patch '{patch}': negative values found.\n"
+                f"Compartments with negative values: {neg_comps}\n"
+                "All seed values must be non-negative."
+            )
         if abs(total - populations[patch]) >= EPSILON:
-            raise ValueError(f"Seed values do not sum to population for patch {patch}")
+            raise ValueError(
+                f"Seed mismatch for patch '{patch}': seed sum ({total}) != population ({populations[patch]}).\n"
+                f"Seed compartments: {dict((c, row[c]) for c in compartments)}\n"
+                "Ensure seed values sum exactly to the patch population."
+            )
 
     # Set up network
     num_patches = len(patches)
@@ -224,13 +254,25 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
             source = row["source"].strip('"')
             target = row["target"].strip('"')
             if source not in patch_idx:
-                raise ValueError(f"NetworkFile contains unknown source patch '{source}'")
+                raise ValueError(
+                    f"Unknown source patch '{source}' in NetworkFile ({config['NetworkFile']}).\n"
+                    f"Known patches: {sorted(patch_idx.keys())}\n"
+                    "Please ensure all patches in NetworkFile match PatchFile."
+                )
             if target not in patch_idx:
-                raise ValueError(f"NetworkFile contains unknown target patch '{target}'")
+                raise ValueError(
+                    f"Unknown target patch '{target}' in NetworkFile ({config['NetworkFile']}).\n"
+                    f"Known patches: {sorted(patch_idx.keys())}\n"
+                    "Please ensure all patches in NetworkFile match PatchFile."
+                )
             i = patch_idx[source]
             j = patch_idx[target]
             if row["weight"] < 0:
-                raise ValueError(f"Network weight must be non-negative between {row['source']} and {row['target']}")
+                raise ValueError(
+                    f"Invalid network weight in NetworkFile ({config['NetworkFile']}): "
+                    f"weight={row['weight']} from '{source}' to '{target}'.\n"
+                    "Network weights must be non-negative. Please correct your network file."
+                )
             network_matrix[i, j] = row["weight"]
 
     # Set up model
@@ -257,11 +299,18 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
     for k, v in transitions_cfg.items():
         parts = [p.strip() for p in str(k).split("->")]
         if len(parts) != 2 or not all(parts):
-            raise ValueError(f"Invalid transition key '{k}'. Use 'S -> I' format.")
+            raise ValueError(
+                f"Invalid transition key '{k}'.\n"
+                "Use arrow format: 'source -> target' (e.g., 'S -> I')\n"
+                "Available compartments: {}".format(sorted(compartments))
+            )
         source, target = parts[0], parts[1]
         if source not in compartments or target not in compartments:
+            bad_comps = [p for p in [source, target] if p not in compartments]
             raise ValueError(
-                f"Transition '{k}' references unknown compartments. Known compartments: {sorted(compartments)}"
+                f"Transition '{k}' uses unknown compartments: {bad_comps}\n"
+                f"Known compartments: {sorted(compartments)}\n"
+                "Please correct the transition definition."
             )
 
         if isinstance(v, str):
@@ -270,8 +319,10 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
             unknown_identifiers = sorted(identifiers - allowed_names - python_keywords)
             if unknown_identifiers:
                 raise ValueError(
-                    f"Transition '{k}' uses unknown names in expression '{v}': {unknown_identifiers}. "
-                    f"Allowed names are compartments + Parameters keys: {sorted(allowed_names)}"
+                    f"Transition '{k}' uses undefined names: {unknown_identifiers}\n"
+                    f"Expression: '{v}'\n"
+                    f"Defined names (compartments + parameters): {sorted(allowed_names)}\n"
+                    "Please check your transition expression for typos or add missing parameters."
                 )
 
         transitions.append({"transition": f"{source}->{target}", "rate": v})
@@ -327,7 +378,11 @@ def run_simulation(
     # Validate and construct time range
     t_max = config.get("TMax")
     if not isinstance(t_max, int) or t_max <= 0:
-        raise ValueError("'TMax' must be a positive integer.")
+        raise ValueError(
+            f"Invalid 'TMax' value: {t_max}\n"
+            "'TMax' must be a positive integer (number of time steps).\n"
+            "Example: TMax: 100"
+        )
     t_range = np.arange(t_max, dtype=float)
 
     # Run simulation

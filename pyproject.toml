@@ -8,7 +8,7 @@ version = "0.1.0b1"
 description = "A modular simulation framework for patch-based metapopulation epidemiology"
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "GPL-3.0" }
+license = { file = "LICENSE" }
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
@@ -45,6 +45,23 @@ Repository = "https://github.com/dsih-artpark/patchsim"
 Documentation = "https://dsih-artpark.github.io/patchsim/"
 
 [project.optional-dependencies]
+test = [
+    "pytest>=8.3.5",
+    "pytest-cov",
+]
+
+docs = [
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.12",
+    "mkdocstrings[python]>=0.29.1",
+]
+
+lint = [
+    "ruff",
+    "mypy",
+    "pre-commit>=3.0.0",
+]
+
 dev = [
     "pytest>=8.3.5",
     "pytest-cov",
@@ -54,7 +71,8 @@ dev = [
     "mkdocs-material>=9.6.12",
     "mkdocstrings[python]>=0.29.1",
     "rich>=13.0.0",
-    "pre-commit>=3.0.0"
+    "pre-commit>=3.0.0",
+    "twine>=5.0.0",
 ]
 
 notebook = [
@@ -77,9 +95,6 @@ fixable = ["ALL"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["patchsim"]
-
-[tool.ruff.lint.per-file-ignores]
-"src/patchsim/models/ka_fmd_sirsv_discrete.py" = ["E501", "E741"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/patchsim"]

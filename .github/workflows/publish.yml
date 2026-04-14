@@ -5,12 +5,19 @@ on:
     types: [published]
   workflow_dispatch: null
 
+env:
+  # Only publish on release tags matching v*.*.* pattern
+  PUBLISH_REGEX: '^v[0-9]+\.[0-9]+\.[0-9]+'
+
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
+
+    # Only publish on valid version tags
+    if: startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '.')
 
     environment:
       name: pypi
@@ -41,6 +48,9 @@ jobs:
 
       - name: Build
         run: uv build
+
+      - name: Check build artifacts
+        run: uv run --no-sync --frozen twine check dist/*
 
       - name: Publish
         uses: pypa/gh-action-pypi-publish@release/v1

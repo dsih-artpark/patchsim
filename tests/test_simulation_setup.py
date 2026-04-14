@@ -88,7 +88,7 @@ def test_setup_simulation_rejects_unknown_transition_identifiers(tmp_data_dir):
         yaml.safe_dump(cfg, f)
 
     cfg = load_config(tmp_data_dir["config"])
-    with pytest.raises(ValueError, match="unknown names"):
+    with pytest.raises(ValueError, match="undefined names"):
         setup_simulation(cfg)
 
 

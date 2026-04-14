@@ -63,6 +63,7 @@ nav:
   - Configuration: configuration.md
   - Architecture: architecture.md
   - Mathematical Model: mathematical-model.md
+  - Rate Multiplication: rate-multiplication.md
   - Simulation Workflow: simulation-workflow.md
   - Network Design: network-design.md
   - Results: results.md
