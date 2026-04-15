@@ -2,6 +2,7 @@
 site_name: Compartmental Multi-Patch Simulation Framework
 site_description: Documentation for a modular metapopulation simulation framework for multi-disease epidemiological modelling.
 site_author: Shreya Mukherjee
+site_url: https://dsih-artpark.github.io/patchsim/
 repo_url: https://github.com/dsih-artpark/patchsim
 repo_name: GitHub
 
@@ -68,8 +69,6 @@ nav:
   - Simulation Workflow: simulation-workflow.md
   - Network Design: network-design.md
   - Results: results.md
-  - References: 
-      - Core: reference/core.md
 extra:
   social:
     - icon: fontawesome/brands/github

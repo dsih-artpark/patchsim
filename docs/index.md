@@ -1,27 +1,71 @@
 # PatchSim
 
-PatchSim is a modular, general-purpose metapopulation epidemiological simulation framework designed for research and translation use cases. It is a flexible and modular system for simulating epidemiological compartment models across single or multiple interacting patches.
+PatchSim is a modular metapopulation simulation framework for compartmental epidemiology.
+It supports single-patch and multi-patch models, YAML-based configuration, and ODE-based
+simulation with network-coupled transmission.
 
-The framework generalizes classical compartmental models (e.g. SIR) by allowing multiple subpopulations ("patches") to interact through a weighted directed network.
+## What PatchSim provides
 
-PatchSim emphasizes:
-- Explicit separation between patch dynamics and network structure
-- Continuous-time ODE-based simulation
-- Configurable parameters via YAML
-- Extensibility toward richer network and mobility models
- 
-## Features
+- **Compartment models**: SIR, SEIR, SIRS, SIS, and custom variants
+- **Multi-patch networks**: Weighted directed patch-to-patch transmission
+- **YAML configuration**: Model structure, parameters, seed data, and network inputs
+- **CLI workflows**: Scaffold, validate, run, inspect models, and export summaries
+- **Results outputs**: CSV time series, plots, and logs
 
-- **Flexible Compartment Models**: Define custom SIR, SEIR, or other compartmental models that support multiple diseases and problem types
-- **Multi-Patch Networks**: Simulate disease spread across connected geographical regions
-- **CLI Integration**: Integrated CLI for running models
-- **Multiple Simulation Methods**: Support for both ODE and discrete-time simulation modes
-- **YAML Configuration**: Structured, readable configuration files
-- **Per-Patch Parameters**: Built-in reproducibility and management of different parameters for each patch
-- **Network Connectivity**: Define custom mixing matrices between patches
-- **Extensibility**: Extensible and user-friendly
+## Start here
 
-## Documentation
-- [Core Module](reference/core.md)
-- [Models](reference/models.md)
-- [Utilities](reference/utils.md)
+If you are new to the project, follow the docs in this order:
+
+1. [Getting Started](getting-started.md) — install, initialize, validate, and run
+2. [Configuration](configuration.md) — every YAML field and a worked SEIR example
+3. [CLI Reference](cli-reference.md) — command and flag reference
+4. [Mathematical Model](mathematical-model.md) — equations and the rate rule
+5. [Network Design](network-design.md) — how multi-patch mixing works
+6. [Results](results.md) — how to interpret CSVs, plots, and logs
+
+## Core concepts
+
+### Compartments
+
+Compartments represent model states such as `S`, `E`, `I`, and `R`.
+
+### Parameters
+
+Parameters are per-capita rates like `beta`, `sigma`, `gamma`, and `rho`.
+
+### Transitions
+
+Transitions define movement between compartments using YAML expressions.
+See [Mathematical Model](mathematical-model.md) for the rate multiplication rule.
+
+### Network structure
+
+Patch-to-patch transmission is represented by a weighted directed network.
+See [Network Design](network-design.md) for the expected CSV format.
+
+## Common workflows
+
+- Use [Getting Started](getting-started.md) for a fast first run
+- Use [Configuration](configuration.md) to edit model behavior
+- Use [CLI Reference](cli-reference.md) to see flags and outputs
+- Use [Results](results.md) to interpret output files
+
+## Output overview
+
+PatchSim writes results to the configured `OutputDir`:
+
+- `runs/` — time series CSV output
+- `plots/` — visualization images
+- `logs/` — run logs with configuration and solver details
+
+## Documentation map
+
+- [Getting Started](getting-started.md)
+- [Configuration](configuration.md)
+- [CLI Reference](cli-reference.md)
+- [Mathematical Model](mathematical-model.md)
+- [Rate Multiplication](rate-multiplication.md)
+- [Network Design](network-design.md)
+- [Simulation Workflow](simulation-workflow.md)
+- [Architecture](architecture.md)
+- [Results](results.md)

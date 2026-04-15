@@ -120,14 +120,14 @@ Configuration is valid: config.yaml
 
 ### Validation Checks
 
-- ✅ All required fields present (see [Configuration](configuration.md))
-- ✅ Compartments defined and non-empty
-- ✅ Transitions use valid compartments and parameters
-- ✅ Patch file exists and is readable
-- ✅ Seed file has correct structure
-- ✅ Compartments match seed file columns
-- ✅ Seed values sum to patch population
-- ✅ Network file (if provided) is consistent
+- All required fields present (see [Configuration](configuration.md))
+- Compartments defined and non-empty
+- Transitions use valid compartments and parameters
+- Patch file exists and is readable
+- Seed file has correct structure
+- Compartments match seed file columns
+- Seed values sum to patch population
+- Network file (if provided) is consistent
 
 ---
 
@@ -274,5 +274,3 @@ patchsim 0.1.0b1
 | `Refusing to overwrite` | Target directory exists | Use `--force` or choose a different name |
 | `Missing required field` | Config missing field (e.g., `TMax`) | See [Configuration](configuration.md) for required fields |
 | `Population mismatch` | Seed values don't sum to population | Fix seed file CSV |
-
-For more, see [Troubleshooting](troubleshooting.md).
