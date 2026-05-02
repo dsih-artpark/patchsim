@@ -1,3 +1,23 @@
+---
+title: PatchSim documentation
+---
+
+# PatchSim documentation
+
+```{toctree}
+:maxdepth: 2
+
+getting-started.md
+configuration.md
+mathematical-model.md
+network-design.md
+simulation-workflow.md
+results.md
+cli-reference.md
+rate-multiplication.md
+
+
+```
 # PatchSim
 
 PatchSim is a modular metapopulation simulation framework for compartmental epidemiology.
