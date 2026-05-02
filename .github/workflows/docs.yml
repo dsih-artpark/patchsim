@@ -27,7 +27,7 @@ jobs:
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
-          token: ${{ secrets.PAGES_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
@@ -59,4 +59,4 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
         with:
-          token: ${{ secrets.PAGES_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
