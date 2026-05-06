@@ -2,7 +2,7 @@ name: Docs (Sphinx)
 
 on:
   push:
-    branches: [shreya-mvp-fixes]
+    branches: [dev]
   workflow_dispatch:
 
 jobs:
