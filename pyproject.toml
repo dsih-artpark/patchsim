@@ -42,7 +42,7 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/dsih-artpark/patchsim"
 Repository = "https://github.com/dsih-artpark/patchsim"
-Documentation = "https://dsih-artpark.github.io/patchsim/"
+Documentation = "https://patchsim.readthedocs.io/"
 
 [project.optional-dependencies]
 test = [
@@ -51,9 +51,9 @@ test = [
 ]
 
 docs = [
-    "mkdocs>=1.6.1",
-    "mkdocs-material>=9.6.12",
-    "mkdocstrings[python]>=0.29.1",
+    "sphinx>=6.0",
+    "myst-parser>=0.18",
+    "pydata-sphinx-theme>=0.14",
 ]
 
 lint = [
@@ -67,9 +67,7 @@ dev = [
     "pytest-cov",
     "ruff",
     "mypy",
-    "mkdocs>=1.6.1",
-    "mkdocs-material>=9.6.12",
-    "mkdocstrings[python]>=0.29.1",
+    "rich>=13.0.0",
     "rich>=13.0.0",
     "pre-commit>=3.0.0",
     "twine>=5.0.0",
