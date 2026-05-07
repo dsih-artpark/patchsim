@@ -28,3 +28,15 @@ myst_enable_extensions = [
     "html_image",
     "colon_fence",
 ]
+
+# Register a CSV lexer name for Pygments; fall back to plain text if unavailable.
+try:
+    from pygments.lexers.data import CsvLexer
+    from sphinx.highlighting import lexers
+
+    lexers["csv"] = CsvLexer()
+except Exception:
+    from pygments.lexers.text import TextLexer
+    from sphinx.highlighting import lexers
+
+    lexers["csv"] = TextLexer()
