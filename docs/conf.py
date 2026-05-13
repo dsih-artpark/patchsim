@@ -29,14 +29,12 @@ myst_enable_extensions = [
     "colon_fence",
 ]
 
-# Register a CSV lexer name for Pygments; fall back to plain text if unavailable.
+# Register a CSV lexer name for Pygments; use named lookup and fall back to text.
+from sphinx.highlighting import lexers as sphinx_lexers
+from pygments import lexers as pyg_lexers
 try:
-    from pygments.lexers.data import CsvLexer
-    from sphinx.highlighting import lexers
-
-    lexers["csv"] = CsvLexer()
+    lexer = pyg_lexers.get_lexer_by_name("csv")
 except Exception:
-    from pygments.lexers.text import TextLexer
-    from sphinx.highlighting import lexers
+    lexer = pyg_lexers.get_lexer_by_name("text")
 
-    lexers["csv"] = TextLexer()
+sphinx_lexers["csv"] = lexer
