@@ -68,7 +68,6 @@ dev = [
     "ruff",
     "mypy",
     "rich>=13.0.0",
-    "rich>=13.0.0",
     "pre-commit>=3.0.0",
     "twine>=5.0.0",
 ]
