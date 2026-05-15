@@ -1,6 +1,9 @@
 import os
 import sys
 
+from pygments import lexers as pyg_lexers
+from sphinx.highlighting import lexers as sphinx_lexers
+
 # Add project root to sys.path
 sys.path.insert(0, os.path.abspath(".."))
 
@@ -30,8 +33,6 @@ myst_enable_extensions = [
 ]
 
 # Register a CSV lexer name for Pygments; use named lookup and fall back to text.
-from sphinx.highlighting import lexers as sphinx_lexers
-from pygments import lexers as pyg_lexers
 try:
     lexer = pyg_lexers.get_lexer_by_name("csv")
 except Exception:
