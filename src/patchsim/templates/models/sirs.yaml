@@ -1,0 +1,10 @@
+# Built-in SIRS template
+compartments: ["S", "I", "R"]
+Parameters:
+  beta: 0.2
+  gamma: 0.1
+  waning: 0.02
+Transitions:
+  "S -> I": "beta"
+  "I -> R": "gamma * I"
+  "R -> S": "waning * R"

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from patchsim.core.simulation import load_config
@@ -8,7 +10,8 @@ def test_load_config_success(tmp_path):
     cfg_file.write_text('PatchFile: foo\nSeedFile: bar\nOutputDir: out\nTMax: 10\nTransitions:\n  "S -> I": "beta"\n')
     cfg = load_config(str(cfg_file))
     assert "PatchFile" in cfg
-    assert cfg["OutputDir"] == "out"
+    assert Path(cfg["OutputDir"]).is_absolute()
+    assert Path(cfg["OutputDir"]).name == "out"
 
 
 def test_load_config_missing_field(tmp_path):
