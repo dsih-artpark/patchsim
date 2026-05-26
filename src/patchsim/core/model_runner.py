@@ -59,4 +59,4 @@ class Model:
     def visualize(self, t, results, patches, outdir, model_name):
         from patchsim.utils.viz import plot_patch_subplots
 
-        plot_patch_subplots(t, results, patches, outdir, model_name)
+        plot_patch_subplots(t, results, patches, outdir, model_name, compartments=self.compartments)

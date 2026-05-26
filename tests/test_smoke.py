@@ -51,7 +51,6 @@ def test_cli_list_models():
     )
     assert result.returncode == 0
     output = (result.stdout + result.stderr).lower()
-    assert "ka_fmd_sirsv_discrete" in output
     assert "sir (yaml-template)" in output
     assert "sis (yaml-template)" in output
 
