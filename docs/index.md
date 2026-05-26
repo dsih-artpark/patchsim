@@ -12,11 +12,10 @@ configuration.md
 mathematical-model.md
 network-design.md
 simulation-workflow.md
+architecture.md
 results.md
 cli-reference.md
 rate-multiplication.md
-
-
 ```
 # PatchSim
 

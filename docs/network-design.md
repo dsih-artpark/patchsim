@@ -11,9 +11,12 @@ day,source,target,weight
 0,B,A,0.005
 
 Each row specifies the contribution of infections in the source patch
-to the force of infection in the target patch.
+to the force of infection in the target patch. The `day` column selects when
+the weights take effect; use `0` for a static network.
 
-## Normalization
+## Weights
 
-For each day, rows are normalized so outgoing weights from each source patch sum to 1 across all targets.
-Normalization occurs exactly once to prevent scaling errors.
+Weights are used exactly as provided — they are **not** auto-normalized. The
+force of infection for patch *i* is `Σⱼ Wᵢⱼ · Iⱼ/Nⱼ`, so a common convention is
+to make each source patch's outgoing weights sum to 1 (including a self-loop
+`source == target` for within-patch transmission), as in the example above.
