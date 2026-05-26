@@ -101,12 +101,7 @@ def get_config_schema() -> dict[str, Any]:
 
 def get_model_catalog() -> list[dict[str, str]]:
     """Return built-in model references and YAML templates for the CLI."""
-    catalog: list[dict[str, str]] = [
-        {"name": "ka_fmd_sirsv_discrete", "kind": "python"},
-    ]
-    for template_name in sorted(MODEL_TEMPLATE_CONFIGS):
-        catalog.append({"name": template_name, "kind": "yaml-template"})
-    return catalog
+    return [{"name": name, "kind": "yaml-template"} for name in sorted(MODEL_TEMPLATE_CONFIGS)]
 
 
 def get_available_template_names() -> list[str]:
@@ -178,10 +173,17 @@ def load_config(config_path: str) -> dict[str, Any]:
 
 def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, float], list, int]:
     """Set up the simulation model and initial conditions."""
-    # Load patch data
+    # Load patch data (accept either case for the 'patch'/'population' columns)
     patch_df = pd.read_csv(config["PatchFile"])
-    patches = patch_df["patch"].tolist()
-    populations = patch_df.set_index("patch")["Population"].to_dict()
+    patch_col = next((c for c in patch_df.columns if c.lower() == "patch"), None)
+    pop_col = next((c for c in patch_df.columns if c.lower() == "population"), None)
+    if patch_col is None or pop_col is None:
+        raise ValueError(
+            f"PatchFile ({config['PatchFile']}) must have 'patch' and 'population' columns.\n"
+            f"Found columns: {list(patch_df.columns)}"
+        )
+    patches = patch_df[patch_col].tolist()
+    populations = patch_df.set_index(patch_col)[pop_col].to_dict()
 
     for p, pop in populations.items():
         if pop <= 0:

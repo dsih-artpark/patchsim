@@ -45,11 +45,13 @@ def _emit_json(payload: dict[str, Any]) -> None:
 
 
 def _cmd_run(config_path: str, *, json_output: bool = False) -> dict[str, Any]:
-    logging.info("Starting PatchSim simulation...")
+    if not json_output:
+        print("Starting PatchSim simulation...")
     config = load_config(config_path)
     net, y0, patches, num_patches = setup_simulation(config)
     summary = run_simulation(config, config["ModelName"], net, y0, patches, num_patches)
-    logging.info("Simulation completed successfully.")
+    if not json_output:
+        print("Simulation completed successfully.")
     return {"ok": True, "config": config_path, **summary} if json_output else summary
 
 
@@ -59,7 +61,8 @@ def _cmd_validate(config_path: str, *, json_output: bool = False, schema: bool =
 
     config = load_config(config_path)
     _net, _y0, patches, num_patches = setup_simulation(config)
-    logging.info("Configuration is valid: %s", config_path)
+    if not json_output:
+        print(f"Configuration is valid: {config_path}")
     if json_output:
         return {
             "ok": True,
@@ -82,9 +85,33 @@ def _copy_template_tree(template_node, target_path: Path) -> None:
     target_path.write_bytes(template_node.read_bytes())
 
 
-def _render_template_config(project_name: str, template_name: str) -> str:
-    config = get_init_template_config(template_name, project_name)
-    return yaml.safe_dump(config, sort_keys=False)
+def _write_seed_for_template(project_dir: Path, config: dict[str, Any]) -> None:
+    """Write a seed CSV whose columns match the template's compartments.
+
+    The scaffold ships a single patch-population file; seed every patch fully
+    susceptible and place one infectious individual in the first patch.
+    """
+    import pandas as pd
+
+    compartments = list(config.get("compartments") or ["S", "I", "R"])
+    patch_df = pd.read_csv(project_dir / config["PatchFile"])
+    patch_col = next(c for c in patch_df.columns if c.lower() == "patch")
+    pop_col = next(c for c in patch_df.columns if c.lower() == "population")
+
+    susceptible = "S" if "S" in compartments else compartments[0]
+    infectious = "I" if "I" in compartments else compartments[-1]
+
+    rows = []
+    for idx, record in patch_df.iterrows():
+        seeded = 1 if idx == 0 else 0
+        row = {"patch": record[patch_col], **{c: 0 for c in compartments}}
+        row[infectious] = seeded
+        row[susceptible] = int(record[pop_col]) - seeded
+        rows.append(row)
+
+    seed_path = project_dir / config["SeedFile"]
+    seed_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(rows)[["patch", *compartments]].to_csv(seed_path, index=False)
 
 
 def _cmd_init(name: str, force: bool = False, template: str = "sir") -> None:
@@ -114,10 +141,12 @@ def _cmd_init(name: str, force: bool = False, template: str = "sir") -> None:
     template_root = resources.files("patchsim").joinpath("templates", "project")
     _copy_template_tree(template_root, project_dir)
 
+    template_config = get_init_template_config(template, project_dir.name)
     config_path = project_dir / "config.yaml"
-    config_path.write_text(_render_template_config(project_dir.name, template), encoding="utf-8")
+    config_path.write_text(yaml.safe_dump(template_config, sort_keys=False), encoding="utf-8")
+    _write_seed_for_template(project_dir, template_config)
 
-    logging.info("Created project scaffold at: %s", project_dir)
+    print(f"Created project scaffold at: {project_dir}")
 
 
 def _list_builtin_models() -> list[dict[str, str]]:
@@ -127,15 +156,16 @@ def _list_builtin_models() -> list[dict[str, str]]:
 def _cmd_list_models(*, json_output: bool = False) -> list[dict[str, str]]:
     models = _list_builtin_models()
     if not models:
-        logging.info("No built-in models found.")
+        if not json_output:
+            print("No built-in models found.")
         return []
 
     if json_output:
         return models
 
-    logging.info("Built-in models and templates:")
+    print("Built-in models and templates:")
     for model in models:
-        logging.info("- %s (%s)", model["name"], model["kind"])
+        print(f"- {model['name']} ({model['kind']})")
     return models
 
 

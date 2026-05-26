@@ -4,7 +4,7 @@ import os
 import matplotlib.pyplot as plt
 
 
-def plot_patch_subplots(t_range, out_ode, patches, output_dir, model_name, patch_parameters=None):
+def plot_patch_subplots(t_range, out_ode, patches, output_dir, model_name, patch_parameters=None, compartments=None):
     """
     Plots all patches as subplots in a single figure and saves the figure.
     """
@@ -17,7 +17,9 @@ def plot_patch_subplots(t_range, out_ode, patches, output_dir, model_name, patch
     axes = axes.flatten() if n > 1 else [axes]
     for i, patch in enumerate(patches):
         ax = axes[i]
-        for c in ["S", "I", "R"]:
+        # Plot the model's actual compartments; fall back to those present for this patch.
+        comps = compartments or [k[: -len(f"_{i}")] for k in out_ode if k.endswith(f"_{i}")]
+        for c in comps:
             ax.plot(t_range, out_ode[f"{c}_{i}"], label=c)
         title = f"Patch {patch} (ODE)"
         if patch_parameters and patch in patch_parameters:
@@ -33,5 +35,5 @@ def plot_patch_subplots(t_range, out_ode, patches, output_dir, model_name, patch
         fig.delaxes(axes[j])
     plt.tight_layout()
     os.makedirs(output_dir, exist_ok=True)
-    plt.savefig(os.path.join(output_dir, f"all_patches_{model_name}_ode.png"))
+    plt.savefig(os.path.join(output_dir, f"patch_timeseries_{model_name}_ode.png"))
     plt.close()
