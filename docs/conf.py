@@ -2,7 +2,7 @@ import os
 import sys
 
 from pygments import lexers as pyg_lexers
-from sphinx.highlighting import lexers as sphinx_lexers # type: ignore
+from sphinx.highlighting import lexers as sphinx_lexers  # type: ignore
 
 # Add project root to sys.path
 sys.path.insert(0, os.path.abspath(".."))
