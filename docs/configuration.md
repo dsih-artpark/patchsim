@@ -82,15 +82,22 @@ SeedFile: data/seeds/initial.csv
 
 **Example file** (`data/networks/network.csv`):
 ```csv
-source,target,weight
-PatchA,PatchB,0.2
-PatchB,PatchA,0.1
+day,source,target,weight
+0,PatchA,PatchA,0.9
+0,PatchA,PatchB,0.1
+0,PatchB,PatchB,0.9
+0,PatchB,PatchA,0.1
 ```
 
 Columns:
+- `day` – Time index the weights take effect from. Use `0` for a static network.
 - `source` – Source patch (origin of transmission)
 - `target` – Target patch (receives transmission)
-- `weight` – Transmission weight (0–1, higher = more transmission)
+- `weight` – Transmission weight (higher = more transmission)
+
+Include a self-loop (`source == target`) for each patch so within-patch
+transmission occurs. Weights are used as given (not auto-normalized); a common
+convention is for each source patch's outgoing weights to sum to 1.
 
 ```yaml
 NetworkFile: data/networks/network.csv
@@ -172,15 +179,23 @@ Transitions:
 - Use parameter names (e.g., `beta`, `gamma`) for rates
 - Python operators allowed: `*`, `+`, `-`, `/`, `**`, `and`, `or`
 - Only identifiers that are compartments or parameters allowed
-- Rates are automatically multiplied by source compartment (see [Rate Multiplication](rate-multiplication.md))
+- **If the expression does *not* mention the source compartment, it is treated
+  as a per-capita rate and multiplied by the source compartment automatically.
+  If it *does* mention the source, it is used as the flow as-is** (so `I -> R: "gamma"`
+  and `I -> R: "gamma * I"` are equivalent — both give a flow of `gamma * I`).
+  See [Rate Multiplication](rate-multiplication.md).
+- For an `S -> I`/`S -> E` infection transition in a multi-patch network, an
+  expression containing `beta` becomes the network force of infection
+  `beta * S * Σⱼ Wᵢⱼ Iⱼ/Nⱼ`. In a single-patch model, make the dependence on `I`
+  explicit (e.g. `beta * I` or `beta * S * I / (S + I + R)`).
 
 **Valid expressions:**
 ```yaml
-S -> I: "beta"           # Rate multiplied by S automatically
-S -> I: "beta * I"       # Manual interaction term
-E -> I: "sigma"
-I -> R: "gamma"
-R -> S: "rho"            # Waning immunity
+S -> I: "beta"           # Multi-patch: network force of infection (beta * S * FOI)
+S -> I: "beta * S * I / (S + I + R)"  # Single-patch mass action (explicit)
+E -> I: "sigma"          # equivalent to "sigma * E"
+I -> R: "gamma * I"      # equivalent to "gamma"
+R -> S: "rho"            # Waning immunity (equivalent to "rho * R")
 ```
 
 **Invalid expressions:**
