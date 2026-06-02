@@ -5,6 +5,8 @@
 
 ![PatchSim Banner](assets/patchsim-banner.png)
 
+[![Documentation Status](https://readthedocs.org/projects/dsih-artpark-patchsim/badge/?version=latest)](https://dsih-artpark-patchsim.readthedocs.io/en/latest/?badge=latest)
+
 **PatchSim** is a modular metapopulation simulation framework for multi-disease epidemiological modelling.
 
 ---
