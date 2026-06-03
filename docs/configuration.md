@@ -103,6 +103,21 @@ convention is for each source patch's outgoing weights to sum to 1.
 NetworkFile: data/networks/network.csv
 ```
 
+Notes on generating networks from GeoJSON/centroids
+-----------------------------------------------
+
+- PatchSim expects network CSVs to follow the header: `day,source,target,weight` (see example above). For static networks set `day` to `0`.
+- The `source`/`target` identifiers must exactly match the patch names in your `PatchFile` (`patch` column). When generating networks from GeoJSON or centroids, ensure feature IDs/centroid IDs use the same names as the `patch` values in `PatchFile`.
+- You can generate a compatible network CSV with the package CLI:
+
+```bash
+python -m patchsim generate-contacts --geojson data/my-regions.geojson \
+  --id-prop region_id --pop-prop population \
+  --out data/networks/contacts.csv --model gravity --format edge --force
+```
+
+The CLI will emit `day,source,target,weight` and will error if generated IDs do not match the `patch` names used by your simulation config. Use `--force` to overwrite existing files.
+
 Or for single-patch:
 
 ```yaml
