@@ -12,7 +12,6 @@ jobs:
     permissions:
       id-token: write
       contents: read
-      packages: write
 
     # Only publish on valid version tags
     if: startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '.')
@@ -51,6 +50,4 @@ jobs:
         run: uv run --no-sync --frozen twine check dist/*
 
       - name: Publish
-        uses: pypa/gh-action-pypi-publish@v1
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
+        uses: pypa/gh-action-pypi-publish@release/v1
