@@ -6,6 +6,79 @@ import numpy as np
 import pandas as pd
 
 
+def load_geofile_centroids(path: str, id_prop: str = "id", pop_prop_candidates=None) -> pd.DataFrame:
+    """Load GeoJSON or Shapefile and return centroids DataFrame with columns ['id','lat','lon','population'].
+
+    For GeoJSON this delegates to load_geojson_centroids. For shapefiles requires geopandas to be
+    installed and will compute geometry centroids.
+    """
+    if path.lower().endswith(".shp"):
+        try:
+            import geopandas as gpd
+        except Exception as e:  # pragma: no cover - optional dependency
+            raise RuntimeError("Reading shapefiles requires geopandas. Install it or provide GeoJSON.") from e
+
+        gdf = gpd.read_file(path)
+        # compute centroids
+        gdf = gdf.to_crs(epsg=4326)
+        cents = gdf.geometry.centroid
+        records = []
+        for idx, row in gdf.iterrows():
+            identifier = row.get(id_prop) or row.get("name") or row.get("NAME") or idx
+            population = None
+            if pop_prop_candidates is None:
+                pop_prop_candidates = ["population", "pop", "pop_total", "POPULATION"]
+            for key in pop_prop_candidates:
+                if key in row and isinstance(row[key], (int, float)):
+                    population = row[key]
+                    break
+            lon = cents.iloc[idx].x if hasattr(cents.iloc[idx], "x") else None
+            lat = cents.iloc[idx].y if hasattr(cents.iloc[idx], "y") else None
+            records.append({"id": identifier, "lon": lon, "lat": lat, "population": population})
+        return pd.DataFrame.from_records(records)
+    else:
+        return load_geojson_centroids(path, id_prop=id_prop, pop_prop_candidates=pop_prop_candidates)
+
+
+def generate_kernels(
+    df: pd.DataFrame,
+    methods: list[str] | None = None,
+    decay: float = 2.0,
+    scale: float = 1.0,
+    min_distance_km: float = 1e-3,
+) -> dict:
+    """Generate contact kernels for the requested methods.
+
+    Returns a dict mapping method name -> numpy.ndarray contact matrix.
+    Supported methods: 'gravity', 'distance'
+    """
+    if methods is None:
+        methods = ["gravity"]
+
+    results: dict[str, np.ndarray] = {}
+    for m in methods:
+        if m == "gravity":
+            if "population" not in df.columns:
+                raise ValueError("Population column 'population' required for gravity kernel")
+            results[m] = gravity_contact_matrix(
+                df,
+                pop_col="population",
+                decay=decay,
+                scale=scale,
+                min_distance_km=min_distance_km,
+            )
+        elif m == "distance":
+            D = distance_matrix_km(df)
+            D_safe = np.maximum(D, min_distance_km)
+            W = 1.0 / (D_safe ** decay)
+            np.fill_diagonal(W, 0.0)
+            results[m] = W
+        else:
+            raise ValueError(f"Unknown kernel method: {m}")
+
+    return results
+
+
 def _haversine_km(lat1, lon1, lat2, lon2):
     # approximate radius of earth in km
     R = 6371.0
@@ -115,6 +188,8 @@ def gravity_contact_matrix(
 
 __all__ = [
     "distance_matrix_km",
+    "generate_kernels",
     "gravity_contact_matrix",
+    "load_geofile_centroids",
     "load_geojson_centroids",
 ]

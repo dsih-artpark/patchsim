@@ -7,7 +7,6 @@ from importlib import resources
 from pathlib import Path
 from typing import Any
 
-import numpy as _np
 import pandas as _pd
 import yaml
 
@@ -22,9 +21,8 @@ from patchsim.core.simulation import (
     setup_simulation,
 )
 from patchsim.utils import (
-    distance_matrix_km,
-    gravity_contact_matrix,
-    load_geojson_centroids,
+    generate_kernels,
+    load_geofile_centroids,
 )
 
 
@@ -223,8 +221,15 @@ Examples:
     gen_p = subparsers.add_parser("generate-contacts", help="Generate contact matrix from GeoJSON or centroids CSV")
     group = gen_p.add_mutually_exclusive_group(required=True)
     group.add_argument("--geojson", help="Path to GeoJSON file containing regions")
+    group.add_argument("--shapefile", help="Path to a shapefile (.shp) containing regions")
     group.add_argument("--centroids", help="Path to CSV with precomputed centroids (id,lat,lon,population)")
-    gen_p.add_argument("--out", default="contacts.csv", help="Output CSV path")
+    gen_p.add_argument("--out", default=None, help="Output CSV path (used when generating a single kernel)")
+    gen_p.add_argument(
+        "--out-dir",
+        default="data/networks",
+        help="Directory to write outputs when generating multiple kernels",
+    )
+    gen_p.add_argument("--methods", default=None, help="Comma-separated methods to generate: gravity,distance")
     gen_p.add_argument("--id-prop", default="id", help="Property name to use as feature id in GeoJSON")
     gen_p.add_argument("--pop-prop", default=None, help="Property name for population in GeoJSON (optional)")
     gen_p.add_argument("--model", choices=["gravity", "distance"], default="gravity", help="Generation method")
@@ -267,10 +272,16 @@ Examples:
             if args.json:
                 _emit_json({"models": result})
         elif args.command == "generate-contacts":
-            # Load centroids
+            # Load centroids from GeoJSON, shapefile, or CSV
             if getattr(args, "geojson", None):
-                df = load_geojson_centroids(
+                df = load_geofile_centroids(
                     args.geojson,
+                    id_prop=args.id_prop,
+                    pop_prop_candidates=[args.pop_prop] if args.pop_prop else None,
+                )
+            elif getattr(args, "shapefile", None):
+                df = load_geofile_centroids(
+                    args.shapefile,
                     id_prop=args.id_prop,
                     pop_prop_candidates=[args.pop_prop] if args.pop_prop else None,
                 )
@@ -280,39 +291,24 @@ Examples:
             if df.empty:
                 raise ValueError("No features/centroids loaded from input")
 
-            if args.model == "gravity":
-                if "population" not in df.columns:
-                    raise ValueError("Population column required for gravity model")
-                mat = gravity_contact_matrix(
-                    df,
-                    pop_col="population",
-                    decay=args.decay,
-                    scale=args.scale,
-                    min_distance_km=args.min_distance,
-                )
+            # Determine methods to generate
+            if args.methods:
+                methods = [m.strip() for m in args.methods.split(",") if m.strip()]
             else:
-                # distance-based: weights = 1/d^decay
-                D = distance_matrix_km(df)
-                D_safe = _np.maximum(D, args.min_distance)
-                mat = (1.0 / (D_safe ** args.decay))
-                _np.fill_diagonal(mat, 0.0)
+                methods = [args.model]
 
-            # Normalization
-            if args.normalize == "row":
-                row_sums = mat.sum(axis=1, keepdims=True)
-                row_sums[row_sums == 0] = 1.0
-                mat = mat / row_sums
-            elif args.normalize == "col":
-                col_sums = mat.sum(axis=0, keepdims=True)
-                col_sums[col_sums == 0] = 1.0
-                mat = mat / col_sums
-            elif args.normalize == "symmetric":
-                s = mat.sum()
-                if s > 0:
-                    mat = mat / s
+            kernels = generate_kernels(
+                df,
+                methods=methods,
+                decay=args.decay,
+                scale=args.scale,
+                min_distance_km=args.min_distance,
+            )
 
-            out_path = Path(args.out)
-            if out_path.exists() and not args.force:
+            out_path = Path(args.out) if args.out else None
+            out_dir = Path(args.out_dir)
+            out_dir.mkdir(parents=True, exist_ok=True)
+            if out_path and out_path.exists() and not args.force:
                 raise FileExistsError(f"Output exists: {out_path} (use --force to overwrite)")
 
             # Determine ID column to use for labeling patches in output
@@ -342,25 +338,46 @@ Examples:
 
             ids = list(df[id_col].astype(str))
 
-            # Write as network CSV matching existing PatchSim conventions: day,source,target,weight
-            if args.format == "edge":
-                rows = []
-                n = mat.shape[0]
-                for i in range(n):
-                    for j in range(n):
-                        w = float(mat[i, j])
-                        if w == 0.0:
-                            continue
-                        rows.append({"day": 0, "source": ids[i], "target": ids[j], "weight": w})
-                out_df = _pd.DataFrame(rows)
-                out_df = out_df[["day", "source", "target", "weight"]]
-                out_df.to_csv(out_path, index=False)
-            else:
-                mdf = _pd.DataFrame(mat, index=ids, columns=ids)
-                # matrix CSV is not used directly by PatchSim but keep for completeness
-                mdf.to_csv(out_path)
+            # Write one file per kernel/method
+            for name, mat in kernels.items():
+                # Normalization per matrix
+                if args.normalize == "row":
+                    row_sums = mat.sum(axis=1, keepdims=True)
+                    row_sums[row_sums == 0] = 1.0
+                    mat = mat / row_sums
+                elif args.normalize == "col":
+                    col_sums = mat.sum(axis=0, keepdims=True)
+                    col_sums[col_sums == 0] = 1.0
+                    mat = mat / col_sums
+                elif args.normalize == "symmetric":
+                    s = mat.sum()
+                    if s > 0:
+                        mat = mat / s
 
-            print(f"Wrote contacts to: {out_path}")
+                if args.format == "edge":
+                    rows = []
+                    n = mat.shape[0]
+                    for i in range(n):
+                        for j in range(n):
+                            w = float(mat[i, j])
+                            if w == 0.0:
+                                continue
+                            rows.append({"day": 0, "source": ids[i], "target": ids[j], "weight": w})
+                    out_df = _pd.DataFrame(rows)[["day", "source", "target", "weight"]]
+                    if out_path and len(kernels) == 1:
+                        target_path = out_path
+                    else:
+                        target_path = out_dir / f"contacts-{name}.csv"
+                    out_df.to_csv(target_path, index=False)
+                else:
+                    mdf = _pd.DataFrame(mat, index=ids, columns=ids)
+                    if out_path and len(kernels) == 1:
+                        target_path = out_path
+                    else:
+                        target_path = out_dir / f"contacts-{name}.csv"
+                    mdf.to_csv(target_path)
+
+                print(f"Wrote contacts ({name}) to: {target_path}")
         else:
             parser.print_help()
             raise SystemExit(2)

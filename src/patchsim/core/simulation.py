@@ -23,22 +23,23 @@ MODEL_TEMPLATE_CONFIGS: dict[str, dict[str, Any]] = {
     "sir": {
         "compartments": ["S", "I", "R"],
         "Parameters": {"beta": 0.08, "gamma": 0.1},
-        "Transitions": {"S -> I": "beta", "I -> R": "gamma * I"},
+        # use per-capita parameter notation (concise); explicit forms are equivalent
+        "Transitions": {"S -> I": "beta", "I -> R": "gamma"},
     },
     "seir": {
         "compartments": ["S", "E", "I", "R"],
         "Parameters": {"beta": 0.08, "sigma": 0.2, "gamma": 0.1},
-        "Transitions": {"S -> E": "beta", "E -> I": "sigma * E", "I -> R": "gamma * I"},
+        "Transitions": {"S -> E": "beta", "E -> I": "sigma", "I -> R": "gamma"},
     },
     "sirs": {
         "compartments": ["S", "I", "R"],
         "Parameters": {"beta": 0.08, "gamma": 0.1, "waning": 0.02},
-        "Transitions": {"S -> I": "beta", "I -> R": "gamma * I", "R -> S": "waning * R"},
+        "Transitions": {"S -> I": "beta", "I -> R": "gamma", "R -> S": "waning"},
     },
     "sis": {
         "compartments": ["S", "I"],
         "Parameters": {"beta": 0.08, "gamma": 0.1},
-        "Transitions": {"S -> I": "beta", "I -> S": "gamma * I"},
+        "Transitions": {"S -> I": "beta", "I -> S": "gamma"},
     },
 }
 

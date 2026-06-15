@@ -118,6 +118,31 @@ python -m patchsim generate-contacts --geojson data/my-regions.geojson \
 
 The CLI will emit `day,source,target,weight` and will error if generated IDs do not match the `patch` names used by your simulation config. Use `--force` to overwrite existing files.
 
+Generator CLI options and tips
+--------------------------------
+
+- `--shapefile PATH`: Accepts a Shapefile (`.shp`) in addition to GeoJSON. Requires `geopandas` to be installed in your environment.
+- `--methods gravity,distance`: Generate one or more kernels. `gravity` uses population-based gravity kernel, `distance` uses a pure distance-decay kernel. Example: `--methods gravity,distance`.
+- `--out` / `--out-dir`: Use `--out` when generating a single kernel file; use `--out-dir` to write multiple files when `--methods` includes more than one method.
+- `--format edge|matrix`: `edge` produces PatchSim-compatible `day,source,target,weight` CSV(s) (default). `matrix` writes a square matrix CSV with patch ids as headers.
+- `--normalize {none,row,col,symmetric}`: Normalize kernel matrices after generation. `row` makes each source's outgoing weights sum to 1; `symmetric` scales the whole matrix to sum to 1.
+
+Large datasets and performance
+--------------------------------
+
+- Pincode- or fine-grained shapefiles can be large; kernel generation computes pairwise distances (O(n^2)) and can be slow or memory heavy for n &gt; 5k. For very large geographies consider preprocessing to a coarser level, or use options such as k-nearest neighbors or distance truncation (not currently in the CLI). If you'd like, we can add `--k-nearest` and `--distance-threshold` options to sparsify kernels.
+- If you plan to use shapefiles, add `geopandas` to your development dependencies and ensure the build environment (CI) can install its system dependencies.
+
+Example generating two kernels (gravity and distance):
+
+```bash
+python -m patchsim generate-contacts --geojson data/my-regions.geojson \
+  --id-prop region_id --pop-prop population \
+  --methods gravity,distance --out-dir data/networks --format edge --force
+```
+
+This will write `data/networks/contacts-gravity.csv` and `data/networks/contacts-distance.csv`.
+
 Or for single-patch:
 
 ```yaml
@@ -195,9 +220,10 @@ Transitions:
 - Python operators allowed: `*`, `+`, `-`, `/`, `**`, `and`, `or`
 - Only identifiers that are compartments or parameters allowed
 - **If the expression does *not* mention the source compartment, it is treated
-  as a per-capita rate and multiplied by the source compartment automatically.
-  If it *does* mention the source, it is used as the flow as-is** (so `I -> R: "gamma"`
-  and `I -> R: "gamma * I"` are equivalent — both give a flow of `gamma * I`).
+  as a per-capita rate and multiplied by the source compartment automatically. If it
+  *does* mention the source, it is used as the flow as-is. We recommend using the
+  concise per-capita form in templates and configs (e.g. `I -> R: "gamma"`). The
+  explicit form (`I -> R: "gamma * I"`) is accepted and equivalent.
   See [Rate Multiplication](rate-multiplication.md).
 - For an `S -> I`/`S -> E` infection transition in a multi-patch network, an
   expression containing `beta` becomes the network force of infection
