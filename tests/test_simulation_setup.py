@@ -4,7 +4,8 @@ import pandas as pd
 import pytest
 import yaml
 
-from patchsim.core.simulation import load_config, setup_simulation
+from patchsim.core.model_runner import Model
+from patchsim.core.simulation import load_config, run_simulation, setup_simulation
 
 
 def test_setup_simulation_returns_objects(tmp_data_dir):
@@ -16,6 +17,38 @@ def test_setup_simulation_returns_objects(tmp_data_dir):
     # check that y0 keys include S_0 and I_1 etc.
     assert "S_0" in y0 and "I_1" in y0
     assert patches == ["A", "B"]
+
+
+def test_setup_simulation_builds_multi_patch_initial_state(tmp_data_dir):
+    cfg = load_config(tmp_data_dir["config"])
+    _net, y0, patches, _num_patches = setup_simulation(cfg)
+
+    assert patches == ["A", "B"]
+    assert y0["S_0"] == 990
+    assert y0["I_0"] == 10
+    assert y0["S_1"] == 795
+    assert y0["I_1"] == 5
+
+
+def test_patch_specific_parameters_change_ode_dynamics(tmp_data_dir):
+    cfg = load_config(tmp_data_dir["config"])
+    net, y0, patches, _num_patches = setup_simulation(cfg)
+    model = Model(net, compartments=list(net.base_model.compartments))
+    rhs = model.construct_ode()
+
+    custom_state = {var: 0.0 for var in net.all_compartments}
+    for patch_idx in range(len(patches)):
+        custom_state[f"S_{patch_idx}"] = 900.0
+        custom_state[f"I_{patch_idx}"] = 100.0
+        custom_state[f"R_{patch_idx}"] = 0.0
+
+    y = [custom_state[var] for var in net.all_compartments]
+    dydt = rhs(y, 0.0)
+    s0_idx = net.all_compartments.index("S_0")
+    s1_idx = net.all_compartments.index("S_1")
+
+    assert dydt[s0_idx] != dydt[s1_idx]
+    assert abs(dydt[s0_idx]) > abs(dydt[s1_idx])
 
 
 def test_setup_simulation_population_check(tmp_data_dir):
@@ -104,3 +137,13 @@ def test_setup_simulation_rejects_compartment_mismatch(tmp_data_dir):
     cfg = load_config(tmp_data_dir["config"])
     with pytest.raises(ValueError, match="Compartment mismatch"):
         setup_simulation(cfg)
+
+
+def test_run_simulation_writes_expected_artifacts(tmp_data_dir):
+    cfg = load_config(tmp_data_dir["config"])
+    net, y0, patches, num_patches = setup_simulation(cfg)
+
+    summary = run_simulation(cfg, cfg.get("ModelName", "tmp-model"), net, y0, patches, num_patches)
+
+    assert Path(summary["csv_path"]).is_file()
+    assert Path(summary["plot_path"]).is_file()

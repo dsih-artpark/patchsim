@@ -9,20 +9,46 @@ from scipy.integrate import odeint
 
 
 class CompartmentalModel:
-    """Base class for compartmental models."""
+    """Base class for compartmental models.
+
+    This class stores the compartment names, parameter values, and transition
+    rules used to evaluate per-patch compartment flows.
+    """
 
     def __init__(self, compartments: list[str], parameters: dict[str, float], transitions: list[dict[str, Any]]):
-        """Initialize the model with compartments, parameters, and transitions."""
+        """Create a compartmental model definition.
+
+        Args:
+            compartments: Ordered list of compartment names.
+            parameters: Model-wide parameter values available to transition
+                expressions.
+            transitions: Transition definitions, each containing a
+                ``"transition"`` label in ``source -> target`` form and a
+                ``"rate"`` expression or numeric value.
+        """
         self.compartments = compartments
         self.parameters = parameters
         self.transitions = transitions
 
     def compute_rates(self, state: dict[str, float], parameters: dict[str, float] | None = None) -> dict[str, float]:
-        """Compute transition rates for each compartment.
+        """Compute transition flows for the current compartment state.
+
+        The returned values are compartment flows, not raw expression values.
+        If a rate expression already includes the source compartment name, it is
+        treated as a full flow expression and is not multiplied by the source
+        compartment again.
 
         Args:
-            state: Current compartment state
-            parameters: Optional parameter override (defaults to self.parameters)
+            state: Mapping from compartment name to current count or density.
+            parameters: Optional parameter mapping to use instead of the model
+                defaults.
+
+        Returns:
+            Mapping from ``"source -> target"`` transition labels to flow
+            values.
+
+        Raises:
+            ValueError: If a transition rate expression cannot be evaluated.
         """
         params = parameters if parameters is not None else self.parameters
         rates = {}
@@ -54,32 +80,64 @@ class CompartmentalModel:
 
 
 class NetworkModel:
-    """Network model for multi-patch simulations."""
+    """Network model for multi-patch simulations.
+
+    This wraps a base compartmental model with a patch-to-patch mixing matrix
+    and helper methods for network-mediated force-of-infection calculations.
+    """
 
     def __init__(self, base_model: CompartmentalModel, num_patches: int, network_matrix: list[list[float]]):
-        """Initialize the network model."""
+        """Create a network-aware simulation model.
+
+        Args:
+            base_model: Compartmental model applied to each patch.
+            num_patches: Number of patches in the network.
+            network_matrix: Square matrix of network weights where row ``i`` and
+                column ``j`` define the contribution from patch ``j`` to patch
+                ``i``.
+        """
         self.base_model = base_model
         self.num_patches = num_patches
         self.network = network_matrix
         self.all_compartments = [f"{c}_{i}" for i in range(num_patches) for c in base_model.compartments]
 
     def get_patch_state(self, full_state: Dict[str, float], patch_idx: int) -> Dict[str, float]:
-        """Get state for a specific patch."""
+        """Extract the state vector for a single patch.
+
+        Args:
+            full_state: Mapping of all compartment variables across all patches.
+            patch_idx: Zero-based patch index to extract.
+
+        Returns:
+            Mapping of compartment name to value for the requested patch.
+        """
         return {c: full_state[f"{c}_{patch_idx}"] for c in self.base_model.compartments}
 
     def get_patch_population(self, state: Dict[str, float]) -> float:
-        """Get total population for a patch."""
+        """Compute the total population for a single patch.
+
+        Args:
+            state: Mapping of compartment name to value for one patch.
+
+        Returns:
+            Total population in the patch.
+        """
         return sum(state[c] for c in self.base_model.compartments)
 
     def compute_force_of_infection(self, full_state: dict[str, float], infected_compartment: str = "I") -> list[float]:
-        """Compute force of infection for each patch (per-capita rate, before beta scaling).
+        """Compute the force of infection for each patch.
+
+        The result is a per-capita infection pressure used upstream by the ODE
+        solver before any beta scaling or source-compartment multiplication is
+        applied.
 
         Args:
-            full_state: Current state of all compartments
-            infected_compartment: Name of the compartment representing infected individuals
+            full_state: Mapping of all compartment variables across all patches.
+            infected_compartment: Name of the compartment representing infected
+                individuals.
 
         Returns:
-            List of per-capita forces of infection (model_runner applies beta * FOI * S)
+            List of per-capita infection pressures, one per patch.
         """
         lambdas = []
         for i in range(self.num_patches):
@@ -111,20 +169,22 @@ class NetworkModel:
         is_infection_transition: bool,
         has_network: bool,
     ) -> float:
-        """Adjust infection rate for network-mediated FOI.
+        """Adjust an infection transition for network-mediated FOI.
 
         Args:
-            patch_params: Parameters for the current patch
-            original_rate_expr: Original rate expression from transition definition
-            rate: Computed rate from base model
-            patch_state: Current state for the patch
-            lambdas: Force of infection for each patch
-            patch_idx: Current patch index
-            is_infection_transition: Whether this is an infection transition
-            has_network: Whether multi-patch network exists
+            patch_params: Parameter values for the current patch.
+            original_rate_expr: Original transition rate expression from the
+                model definition.
+            rate: Flow value computed by the base model.
+            patch_state: Current state for the patch.
+            lambdas: Force-of-infection values for all patches.
+            patch_idx: Current patch index.
+            is_infection_transition: Whether the current transition is an
+                infection transition.
+            has_network: Whether a multi-patch network is active.
 
         Returns:
-            Adjusted rate incorporating network FOI if applicable
+            Adjusted flow value with network FOI applied when appropriate.
         """
         if is_infection_transition and has_network:
             # Network case: Apply network FOI (lambdas already computed)
@@ -142,7 +202,14 @@ class NetworkModel:
         return adjusted_rate
 
     def compute_derivatives(self, state: dict[str, float]) -> dict[str, float]:
-        """Compute derivatives for all compartments based on transitions, incorporating network-mediated FOI."""
+        """Compute derivatives for all compartment variables.
+
+        Args:
+            state: Full state mapping across all patches.
+
+        Returns:
+            Derivatives for every ``compartment_patch`` variable in the model.
+        """
         derivatives = {c: 0.0 for c in self.all_compartments}
 
         # Compute network-mediated force of infection for each patch
@@ -208,7 +275,15 @@ class NetworkModel:
         return derivatives
 
     def simulate_discrete(self, y0_dict: dict[str, float], t_range: list[float]) -> dict[str, list[float]]:
-        """Run discrete-time simulation."""
+        """Run a simple discrete-time forward simulation.
+
+        Args:
+            y0_dict: Initial state mapping for all compartment variables.
+            t_range: Sequence of time points to simulate.
+
+        Returns:
+            History of each compartment variable over time.
+        """
         state = y0_dict.copy()
         history = {c: [state[c]] for c in self.all_compartments}
 
@@ -224,7 +299,18 @@ class NetworkModel:
     def simulate_ode(
         self, y0_dict: dict[str, float], t_range: list[float], integrator: Callable = odeint
     ) -> tuple[list[float], dict[str, list[float]]]:
-        """Run ODE simulation."""
+        """Run an ODE simulation over the requested time range.
+
+        Args:
+            y0_dict: Initial state mapping for all compartment variables.
+            t_range: Sequence of time points to integrate over.
+            integrator: ODE integrator callable with an ``odeint``-compatible
+                signature.
+
+        Returns:
+            A tuple containing the time range and the simulated compartment
+            trajectories.
+        """
         y0 = [y0_dict[c] for c in self.all_compartments]
 
         def rhs(y, t):

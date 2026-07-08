@@ -1,11 +1,13 @@
 # PatchSim
 
-> ⚠️ **WARNING: Active Development**  
-> PatchSim is currently under **heavy development**. Features are experimental and subject to change. Not recommended for production use at this stage.
+> PatchSim is under active refinement as part of the JOSS submission process. Core workflows are documented and usable, while the API may continue to evolve between releases.
 
 ![PatchSim Banner](assets/patchsim-banner.png)
 
 [![Documentation Status](https://readthedocs.org/projects/dsih-artpark-patchsim/badge/?version=latest)](https://dsih-artpark-patchsim.readthedocs.io/en/latest/?badge=latest)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.REPLACE_WITH_RELEASE_DOI-blue)](https://doi.org/10.5281/zenodo.REPLACE_WITH_RELEASE_DOI)
+
+The DOI badge and citation entry below are placeholders until the v0.1.0 release is archived on Zenodo.
 
 **PatchSim** is a modular metapopulation simulation framework for multi-disease epidemiological modelling.
 

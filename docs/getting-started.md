@@ -168,6 +168,16 @@ patchsim list-models --json
 - **[Network Design](network-design.md)** – Setting up multi-patch simulations
 - **[Results](results.md)** – Understanding and analyzing outputs
 
+## Worked Example
+
+If you want a single concrete run from configuration to output, use the bundled script:
+
+```bash
+uv run python examples/run_sample_simulation.py
+```
+
+This executes the sample configuration in [configs/sample-sir-ode.yaml](../configs/sample-sir-ode.yaml), writes the CSV and plot into [output/sample-sir-ode/](../output/sample-sir-ode/), and prints a preview of the generated time series.
+
 ## Troubleshooting
 
 **"Compartment mismatch"** – Ensure seed file columns match configured compartments  
