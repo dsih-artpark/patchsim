@@ -2,11 +2,11 @@
 title: "PatchSim: a modular metapopulation simulation framework for compartmental epidemiology"
 authors:
   - name: "Adish Assain"
-    affiliation: "ArtPark Research"
+    affiliation: "ARTPARK"
   - name: "Sneha S"
-    affiliation: "ArtPark Research"
+    affiliation: "ARTPARK"
   - name: "Shreya Mukherjee"
-    affiliation: "ArtPark Research"
+    affiliation: "ARTPARK"
 date: 2026-07-10
 bibliography: paper.bib
 ---
@@ -125,5 +125,5 @@ Please cite this software as:
 Acknowledgements
 ----------------
 
-This work was supported by ArtPark Research. Contributors and additional
+This work was supported by ARTPARK, IISc. Contributors and additional
 acknowledgements are recorded in the Git history.
