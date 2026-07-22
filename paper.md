@@ -126,7 +126,7 @@ authors.
 # Acknowledgements
 
 The authors thank the ARTPARK team at the Indian Institute of Science for
-institutional support. This work was supported by the Robotics and AI technology Hub,
+institutional support. This work was supported by the AI and Robotics Technology Park,
 ARTPARK, IISc, Bengaluru.
 
 # References
