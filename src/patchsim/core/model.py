@@ -292,6 +292,13 @@ class NetworkModel:
                 a non-finite or significantly negative compartment value.
         """
         state = y0_dict.copy()
+        expected_compartments = set(self.all_compartments)
+        missing = expected_compartments - state.keys()
+        extra = state.keys() - expected_compartments
+        if missing or extra:
+            raise ValueError(
+                f"Initial state keys do not match model compartments (missing={sorted(missing)}, extra={sorted(extra)})"
+            )
         history = {c: [state[c]] for c in self.all_compartments}
 
         times = _validated_time_grid(t_range)

@@ -9,6 +9,7 @@ import warnings  # noqa: F401  - loads catch_warnings, which the escape payload 
 import numpy as np
 import pytest
 
+from patchsim.core import expressions
 from patchsim.core.expressions import evaluate
 from patchsim.core.model import CompartmentalModel
 
@@ -132,6 +133,23 @@ def test_oversized_expression_is_rejected_before_parsing():
     """Bound the input before handing it to the parser, not only the AST depth after."""
     with pytest.raises(ValueError, match="too long"):
         _model("1+" * 10000 + "1").compute_rates({"S": 1.0, "I": 1.0})
+
+
+def test_parsed_expression_is_reused(monkeypatch):
+    expressions._parse.cache_clear()
+    parse = expressions.ast.parse
+    parse_calls = 0
+
+    def counting_parse(*args, **kwargs):
+        nonlocal parse_calls
+        parse_calls += 1
+        return parse(*args, **kwargs)
+
+    monkeypatch.setattr(expressions.ast, "parse", counting_parse)
+
+    assert evaluate("beta * S", {"beta": 0.5, "S": 4.0}) == pytest.approx(2.0)
+    assert evaluate("beta * S", {"beta": 0.25, "S": 8.0}) == pytest.approx(2.0)
+    assert parse_calls == 1
 
 
 def test_arithmetic_expressions_still_evaluate():

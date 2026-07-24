@@ -66,8 +66,22 @@ def test_initial_state_is_validated_even_when_no_steps_are_taken():
         net.simulate_discrete({"I_0": -1.0, "R_0": 0.0}, [0.0])
 
 
+def test_missing_initial_state_key_is_reported_clearly():
+    net = _decay_network(gamma=0.2)
+
+    with pytest.raises(ValueError, match=r"missing=\['R_0'\]"):
+        net.simulate_discrete({"I_0": 100.0}, [0.0, 1.0])
+
+
+def test_extra_initial_state_key_is_reported_clearly():
+    net = _decay_network(gamma=0.2)
+
+    with pytest.raises(ValueError, match=r"extra=\['X_0'\]"):
+        net.simulate_discrete({"I_0": 100.0, "R_0": 0.0, "X_0": 1.0}, [0.0, 1.0])
+
+
 def test_initial_total_overflowing_to_infinity_is_rejected():
-    """Each compartment is finite but their sum is not, which would make the tolerance inf."""
+    """Each compartment is finite but their sum is not."""
     import sys
 
     half_max = sys.float_info.max
@@ -79,13 +93,7 @@ def test_initial_total_overflowing_to_infinity_is_rejected():
 
 @pytest.mark.parametrize("bad", [float("nan"), float("inf")])
 def test_non_finite_initial_state_is_rejected(bad):
-    """The divergence tolerance is derived from the initial total.
-
-    A non-finite start makes that tolerance non-finite, and every ``value < -tolerance``
-    comparison then evaluates False, disabling the negative-population guard entirely.
-    The compartment here is referenced by no transition, so the expression evaluator never
-    inspects it and cannot catch this on our behalf.
-    """
+    """A compartment unused by transitions must still be validated."""
     base = CompartmentalModel(
         compartments=["I", "R", "X"],
         parameters={"gamma": 0.2},

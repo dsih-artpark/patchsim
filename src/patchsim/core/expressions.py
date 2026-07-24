@@ -8,6 +8,7 @@ import ast
 import math
 import numbers
 import operator
+from functools import lru_cache
 from typing import Any, Mapping
 
 _MAX_DEPTH = 64  # maximum expression nesting depth
@@ -29,6 +30,21 @@ _UNARY_OPS = {
 }
 
 
+@lru_cache(maxsize=256)
+def _parse(expression: str) -> ast.AST:
+    if len(expression) > _MAX_LENGTH:
+        raise ValueError(f"is too long to evaluate ({len(expression)} characters, limit {_MAX_LENGTH})")
+
+    try:
+        tree = ast.parse(expression, mode="eval")
+    except SyntaxError as exc:
+        raise ValueError(f"could not be parsed: {exc.msg}") from exc
+    except (RecursionError, MemoryError) as exc:
+        raise ValueError("is too deeply nested to parse") from exc
+
+    return tree.body
+
+
 def evaluate(expression: str, scope: Mapping[str, Any]) -> float:
     """Evaluate an arithmetic rate expression against a scope of named values.
 
@@ -43,17 +59,7 @@ def evaluate(expression: str, scope: Mapping[str, Any]) -> float:
         ValueError: If the expression uses an unsupported construct, references an
             unknown name, or cannot be evaluated numerically.
     """
-    if len(expression) > _MAX_LENGTH:
-        raise ValueError(f"is too long to evaluate ({len(expression)} characters, limit {_MAX_LENGTH})")
-
-    try:
-        tree = ast.parse(expression, mode="eval")
-    except SyntaxError as exc:
-        raise ValueError(f"could not be parsed: {exc.msg}") from exc
-    except (RecursionError, MemoryError) as exc:
-        raise ValueError("is too deeply nested to parse") from exc
-
-    return _evaluate_node(tree.body, scope, depth=0)
+    return _evaluate_node(_parse(expression), scope, depth=0)
 
 
 def _evaluate_node(node: ast.AST, scope: Mapping[str, Any], depth: int) -> float:
