@@ -1,82 +1,67 @@
-# Rate Multiplication Rule
+# Rate multiplication
 
-## Overview
+Transition expressions can be written either as per-capita rates or as complete
+flows. PatchSim distinguishes the two forms by checking whether the source
+compartment appears as an identifier in the expression.
 
-PatchSim uses a **rate multiplication** approach to scale transition rates based on compartment sizes or population dynamics. This section documents how rates are computed and applied across compartmental models.
+## Source rule
 
-## Basic Principle
+For `A -> B`:
 
-In compartmental epidemiological models, transition rates represent the per-capita rate at which individuals move from one compartment to another. The actual number of individuals transitioning in a time step is computed by multiplying this per-capita rate by the number of individuals in the source compartment.
+- if the expression does not name `A`, PatchSim multiplies it by `A`;
+- if the expression names `A`, PatchSim uses the evaluated expression as the
+  flow.
 
-### Mathematical Formulation
+| Transition | Expression | Flow |
+| --- | --- | --- |
+| `I -> R` | `"gamma"` | $\gamma I$ |
+| `I -> R` | `"gamma * I"` | $\gamma I$ |
+| `E -> I` | `"sigma"` | $\sigma E$ |
+| `S -> I` | `"beta * I / N"` | $\beta SI/N$ if `N` is a parameter |
+| `S -> I` | `"beta * S * I / N"` | $\beta SI/N$ |
 
-For a transition from compartment A to compartment B:
+This is an identifier check, not dimensional analysis. An expression that
+mentions the source for another reason is still treated as a complete flow.
 
-$$\text{Flow}_{A \to B} = \text{rate}_{A \to B} \times n_A$$
+## Multi-patch infection rule
 
-where:
-- $\text{Flow}_{A \to B}$ is the number of individuals transitioning per unit time
-- $\text{rate}_{A \to B}$ is the per-capita transition rate (e.g., recovery rate, transmission rate)
-- $n_A$ is the current population in compartment A
+The CLI ODE runner applies one additional rule to transitions from `S` to `I`
+or `E` when more than one patch is present: it multiplies the local flow by the
+network infectious pressure
 
-## Application in PatchSim
+$$
+\lambda_i = \sum_j W_{ij}\frac{I_j}{N_j}.
+$$
 
-### Contact-Based Transmission
-
-For disease transmission, the force of infection is computed as a weighted sum of infectious populations across patches:
-
-$$\lambda_i(t) = \beta \sum_j W_{ij} \frac{I_j}{N_j}$$
-
-where:
-- $\lambda_i$ is the per-capita force of infection in patch i
-- $\beta$ is the transmission rate
-- $W_{ij}$ is the network weight from source patch j to target patch i
-- $I_j$ is the number of infectious individuals in source patch j
-- $N_j$ is the total population in source patch j
-
-The actual number of new infections is then:
-
-$$dS_i = -\lambda_i \times S_i \, dt$$
-
-### Recovery and Other Transitions
-
-For non-transmission transitions (recovery, loss of immunity, disease progression), the rate multiplication is simpler:
-
-$$\text{Flow} = \text{rate} \times \text{compartment\_size}$$
-
-For example:
-$$dI = -\gamma \times I \, dt$$
-
-where $\gamma$ is the per-capita recovery rate.
-
-## Implementation Details
-
-### Parameter-Based Rate Scaling
-
-Parameters defined in the `Parameters` section of the configuration are used directly as per-capita rates:
+The built-in multi-patch templates use:
 
 ```yaml
-Parameters:
-  beta: 0.5      # Transmission rate (contacts per individual per day)
-  gamma: 0.1     # Recovery rate (1/disease duration)
-  sigma: 0.2     # Rate of progression E → I
+"S -> I": "beta"
 ```
 
-These rates multiply the compartment sizes during ODE integration.
+The source rule produces $\beta S_i$, then network coupling produces
+$\beta S_i\lambda_i$.
 
-### Validation in PatchSim
+Do not add a second infectious proportion to this template expression unless
+that extra factor is part of the intended model.
 
-PatchSim validates that all transition expressions reference valid compartments and parameters. This ensures that rate multiplication is applied consistently across the model.
+## Single-patch infection rule
 
-## Common Pitfalls
+A one-patch model does not apply network coupling. To represent
+frequency-dependent infection, write the infectious proportion explicitly:
 
-1. **Forgetting compartment size**: If you want a fixed number of individuals to transition (not rate-based), you must normalize by population size in the configuration or code.
+```yaml
+"S -> I": "beta * I / (S + I + R)"
+```
 
-2. **Mixing rates and absolute numbers**: All transition rates in PatchSim are assumed to be per-capita. Do not mix per-capita rates with fixed transition counts in the same model.
+PatchSim multiplies this by `S`, producing $\beta SI/N$.
 
-3. **Network weight interpretation**: Network weights are applied to the compartment proportion, not the absolute number. This ensures that transmission scales appropriately with patch population sizes.
+## Expression safety
 
-## References
+Expressions are parsed as arithmetic, not executed as Python. They may use
+finite real numbers, known names, and the documented arithmetic operators.
+Calls, attributes, indexing, comparisons, boolean logic, and comprehensions are
+rejected. Results must be finite and real.
 
-- [Mathematical Model](mathematical-model.md) for detailed network-coupled ODE formulations
-- [Configuration Guide](configuration.md) for specifying parameters and transitions
+See [Configuration](configuration.md) for the complete operator list and
+[Mathematical model](mathematical-model.md) for the equations.

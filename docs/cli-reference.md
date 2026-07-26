@@ -1,231 +1,136 @@
-# CLI Reference
+# CLI reference
 
-Command-line interface reference for PatchSim.
+## Invocation and streams
 
-## Overview
+After installation:
 
 ```bash
-patchsim [COMMAND] [OPTIONS]
+patchsim COMMAND [OPTIONS]
 ```
 
-**Available commands:**
-- `init` – Scaffold a new project
-- `run` – Execute a simulation
-- `validate` – Check configuration and inputs
-- `list-models` – Show available templates
-- `--version` – Display version
+From a source checkout:
 
----
+```bash
+uv run patchsim COMMAND [OPTIONS]
+```
+
+The CLI uses these conventions:
+
+- Human-readable command results go to standard output.
+- Logs and error diagnostics go to standard error and, for a run, to a file under
+  `OutputDir/logs/`.
+- `--json` writes the command result as JSON to standard output.
+- A failed command exits non-zero and reports the underlying validation or runtime
+  error.
+- Paths inside a config file are resolved relative to the config file.
+
+## Commands
+
+| Command | Purpose |
+| --- | --- |
+| `init` | Create a project from a built-in template |
+| `validate` | Load and validate a configuration and its input files |
+| `run` | Run the ODE simulation and write artifacts |
+| `list-models` | List built-in project templates |
 
 ## `init`
 
-Initialize a new PatchSim project with starter files.
+```bash
+patchsim init NAME [--template {seir,sir,sirs,sis}] [--force]
+```
 
-### Usage
+`NAME` is both the target directory and the generated `ModelName`. The default
+template is `sir`.
 
 ```bash
-patchsim init PROJECT_NAME [--template TEMPLATE] [--force]
+patchsim init baseline
+patchsim init latency-study --template seir
 ```
 
-### Arguments
+`--force` replaces a non-empty target directory after safety checks. It is
+destructive: use it only when the existing directory can be discarded. PatchSim
+refuses to replace the filesystem root, the current directory, or an ancestor of
+the current directory.
 
-| Argument | Required | Description |
-|----------|----------|-------------|
-| `PROJECT_NAME` | Yes | Directory name for the new project |
-
-### Options
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--template` | `sir` | Starter model template: `sir`, `seir`, `sirs`, `sis` |
-| `--force` | - | Overwrite target directory if it already exists |
-
-### Examples
-
-```bash
-# Create a new SIR project (default)
-patchsim init my-project
-
-# Create with SEIR template
-patchsim init my-project --template seir
-
-# Overwrite existing directory
-patchsim init my-project --force
-```
-
-### Output
-
-Creates a directory with:
-```
-config.yaml                              # Model configuration
-data/
-  patch/                                 # Patch population files
-  seeds/                                 # Initial conditions
-  networks/                              # Network topology (if multi-patch)
-output/                                  # (Empty until run)
-```
-
----
+The scaffold contains `config.yaml`, patch/network/seed CSV files, and an `output`
+directory. It does not create a `.patchsim` directory.
 
 ## `validate`
 
-Validate configuration file and input data for consistency.
-
-### Usage
-
 ```bash
-patchsim validate [-c CONFIG] [--schema] [--json]
-```
-
-### Options
-
-| Option | Required | Description |
-|--------|----------|-------------|
-| `-c, --config` | Conditional* | Path to config YAML file |
-| `--schema` | - | Print the configuration JSON Schema |
-| `--json` | - | Output validation results as JSON |
-
-*Required unless `--schema` is used.
-
-### Examples
-
-```bash
-# Validate a configuration file
-patchsim validate -c config.yaml
-
-# Print the JSON Schema for config files
+patchsim validate -c CONFIG [--json]
 patchsim validate --schema
-
-# Validate and output JSON
-patchsim validate -c config.yaml --json
 ```
 
-### Output (Plain Text)
+`-c/--config` is required unless `--schema` is used.
 
-```
+Validation checks:
+
+- required configuration fields;
+- patch and population columns;
+- positive patch populations;
+- seed compartments, values, patch identifiers, and population totals;
+- transition arrow syntax, compartment names, and expression identifiers;
+- patch-parameter identifiers; and
+- day-zero network patch identifiers and non-negative weights.
+
+Plain output:
+
+```text
 Configuration is valid: config.yaml
 ```
 
-### Output (JSON)
-
-```json
-{
-  "ok": true,
-  "config": "config.yaml",
-  "model_name": "sample-sir-ode",
-  "num_patches": 1,
-  "patches": ["PatchA"]
-}
-```
-
-### Validation Checks
-
-- All required fields present (see [Configuration](configuration.md))
-- Compartments defined and non-empty
-- Transitions use valid compartments and parameters
-- Patch file exists and is readable
-- Seed file has correct structure
-- Compartments match seed file columns
-- Seed values sum to patch population
-- Network file (if provided) is consistent
-
----
+JSON output includes `ok`, `config`, `model_name`, `num_patches`, and `patches`.
+`--schema` prints the JSON Schema used for editor and tooling integration.
 
 ## `run`
-
-Execute a simulation and generate outputs.
-
-### Usage
 
 ```bash
 patchsim run -c CONFIG [--json]
 ```
 
-### Options
+The command validates the same inputs, runs the current ODE solver, and writes:
 
-| Option | Required | Description |
-|--------|----------|-------------|
-| `-c, --config` | Yes | Path to configuration YAML file |
-| `--json` | - | Output run summary as JSON |
+| Path under `OutputDir` | Contents |
+| --- | --- |
+| `runs/all_patches_MODEL_ode.csv` | Reporting time and every compartment |
+| `plots/patch_timeseries_MODEL_ode.png` | One subplot per patch |
+| `logs/MODEL_run_YYYYMMDD_HHMMSS.log` | Resolved inputs and run details |
 
-### Examples
-
-```bash
-# Run a simulation
-patchsim run -c config.yaml
-
-# Run and capture output as JSON
-patchsim run -c config.yaml --json
-```
-
-### Output (Plain Text)
-
-```
-Starting PatchSim simulation...
-Model: sample-sir-ode
-Parameters: beta=0.5, gamma=0.1
-Simulation completed successfully.
-```
-
-### Output (JSON)
+The JSON summary contains:
 
 ```json
 {
   "ok": true,
-  "config": "config.yaml",
-  "model_name": "sample-sir-ode",
-  "output_dir": "output",
-  "csv_path": "output/runs/all_patches_sample-sir-ode_ode.csv",
-  "plot_path": "output/plots/patch_timeseries_sample-sir-ode_ode.png",
-  "num_patches": 1,
-  "patches": ["PatchA"],
-  "t_max": 100
+  "config": "/path/to/config.yaml",
+  "model_name": "baseline",
+  "output_dir": "/path/to/output/baseline",
+  "csv_path": "/path/to/output/baseline/runs/all_patches_baseline_ode.csv",
+  "plot_path": "/path/to/output/baseline/plots/patch_timeseries_baseline_ode.png",
+  "num_patches": 2,
+  "patches": ["A", "B"],
+  "t_max": 60
 }
 ```
 
-### Output Files
+Resolved paths may be absolute. The JSON summary is not the simulation time
+series.
 
-Generates in `OutputDir` (from config):
-
-| File | Description |
-|------|-------------|
-| `runs/all_patches_MODEL_ode.csv` | Time series data (time + all compartments) |
-| `plots/patch_timeseries_MODEL_ode.png` | Line plot of all compartments over time |
-| `logs/MODEL_run_*.log` | Simulation log (detailed diagnostics) |
-
-See [Results](results.md) for output format details.
-
----
+:::{warning}
+The CSV and PNG names are deterministic. A rerun with the same `ModelName` and
+`OutputDir` overwrites them. Use one output directory per retained scenario or
+run. Logs remain separate because their names include a timestamp.
+:::
 
 ## `list-models`
-
-Display available starter templates.
-
-### Usage
 
 ```bash
 patchsim list-models [--json]
 ```
 
-### Options
+Plain output:
 
-| Option | Description |
-|--------|-------------|
-| `--json` | Output model list as JSON |
-
-### Examples
-
-```bash
-# List available templates
-patchsim list-models
-
-# Output as JSON
-patchsim list-models --json
-```
-
-### Output (Plain Text)
-
-```
+```text
 Built-in models and templates:
 - seir (yaml-template)
 - sir (yaml-template)
@@ -233,44 +138,12 @@ Built-in models and templates:
 - sis (yaml-template)
 ```
 
-### Output (JSON)
+These are configuration templates, not separately implemented solver classes.
 
-```json
-{
-  "models": [
-    {"name": "seir", "kind": "yaml-template"},
-    {"name": "sir", "kind": "yaml-template"},
-    {"name": "sirs", "kind": "yaml-template"},
-    {"name": "sis", "kind": "yaml-template"}
-  ]
-}
-```
-
----
-
-## Global Options
-
-### `--version`
-
-Display the installed PatchSim version.
+## Version
 
 ```bash
 patchsim --version
 ```
 
-Output:
-```
-patchsim 0.1.0b1
-```
-
----
-
-## Common Errors and Solutions
-
-| Error | Cause | Solution |
-|-------|-------|----------|
-| `Compartment mismatch` | Seed file columns don't match config | Update seed file or config compartments |
-| `Unknown names in expression` | Typo in transition rate | Check parameter/compartment names in config |
-| `Refusing to overwrite` | Target directory exists | Use `--force` or choose a different name |
-| `Missing required field` | Config missing field (e.g., `TMax`) | See [Configuration](configuration.md) for required fields |
-| `Population mismatch` | Seed values don't sum to population | Fix seed file CSV |
+The version is read from the installed package metadata.
