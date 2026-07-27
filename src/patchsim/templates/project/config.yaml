@@ -14,6 +14,8 @@ ModelName: {{PROJECT_NAME}}
 
 # Simulation parameters
 TMax: 60
+Solver: ode
+TimeStep: 1.0
 Tolerance: 1e-8
 MaxIter: 10000
 StartDate: 2020-01-01

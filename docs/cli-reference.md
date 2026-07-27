@@ -30,7 +30,7 @@ The CLI uses these conventions:
 | --- | --- |
 | `init` | Create a project from a built-in template |
 | `validate` | Load and validate a configuration and its input files |
-| `run` | Run the ODE simulation and write artifacts |
+| `run` | Run the configured solver and write artifacts |
 | `list-models` | List built-in project templates |
 | `generate-contacts` | Generate a validated spatial network CSV |
 
@@ -90,12 +90,13 @@ JSON output includes `ok`, `config`, `model_name`, `num_patches`, and `patches`.
 patchsim run -c CONFIG [--json]
 ```
 
-The command validates the same inputs, runs the current ODE solver, and writes:
+The command validates the same inputs, runs `Solver: ode` or
+`Solver: discrete`, and writes:
 
 | Path under `OutputDir` | Contents |
 | --- | --- |
-| `runs/all_patches_MODEL_ode.csv` | Reporting time and every compartment |
-| `plots/patch_timeseries_MODEL_ode.png` | One subplot per patch |
+| `runs/all_patches_MODEL_SOLVER.csv` | Reporting time and every compartment |
+| `plots/patch_timeseries_MODEL_SOLVER.png` | One subplot per patch |
 | `logs/MODEL_run_YYYYMMDD_HHMMSS.log` | Resolved inputs and run details |
 
 The JSON summary contains:
@@ -110,7 +111,9 @@ The JSON summary contains:
   "plot_path": "/path/to/output/baseline/plots/patch_timeseries_baseline_ode.png",
   "num_patches": 2,
   "patches": ["A", "B"],
-  "t_max": 60
+  "t_max": 60,
+  "solver": "ode",
+  "time_step": 1.0
 }
 ```
 
@@ -118,9 +121,10 @@ Resolved paths may be absolute. The JSON summary is not the simulation time
 series.
 
 :::{warning}
-The CSV and PNG names are deterministic. A rerun with the same `ModelName` and
-`OutputDir` overwrites them. Use one output directory per retained scenario or
-run. Logs remain separate because their names include a timestamp.
+The CSV and PNG names are deterministic per solver. A rerun with the same
+`ModelName`, solver, and `OutputDir` overwrites them, including a rerun with a
+different `TimeStep`. Use one output directory per retained scenario or run.
+Logs remain separate because their names include a timestamp.
 :::
 
 ## `list-models`

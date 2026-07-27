@@ -11,8 +11,7 @@ CLI
   -> load_config
   -> setup_simulation
   -> NetworkModel + initial state
-  -> Model.solve
-  -> scipy.integrate.odeint
+  -> NetworkModel.simulate_ode | NetworkModel.simulate_discrete
   -> CSV + PNG + log
 ```
 
@@ -43,11 +42,9 @@ arithmetic evaluator.
 
 ### `patchsim.core.model_runner`
 
-Provides the high-level `Model` used by the CLI. It constructs the coupled ODE
-right-hand side and solves it with `scipy.integrate.odeint`.
-
-The CLI currently uses this ODE path directly. Solver selection is not exposed in
-configuration.
+Provides the compatibility `Model` Python API. It solves the coupled ODE with
+`scipy.integrate.odeint`. The CLI dispatches through `NetworkModel` so its ODE
+and discrete paths share the same derivative function.
 
 ### `patchsim.utils`
 
@@ -67,6 +64,6 @@ implementation.
 ## Current extension boundary
 
 Built-in model names are YAML template data interpreted by the same runtime.
-PatchSim does not yet expose a plugin registry or configuration-selectable solver.
-New behavior currently requires Python changes or a new configuration using the
-existing transition language.
+PatchSim exposes configuration-selectable built-in solvers but no plugin
+registry. New solver behavior requires Python changes; new compartmental models
+can use the existing transition language.

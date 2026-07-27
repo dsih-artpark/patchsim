@@ -1,9 +1,9 @@
 # PatchSim documentation
 
 PatchSim is a configuration-driven framework for compartmental epidemiology on one
-or more connected patches. The current CLI loads YAML and CSV inputs, solves the
-resulting continuous-time model with SciPy's `odeint`, and writes a time-series CSV,
-a plot, and a run log.
+or more connected patches. The CLI loads YAML and CSV inputs, runs either
+LSODA-based ODE integration or deterministic explicit Euler, and writes a
+time-series CSV, a plot, and a run log.
 
 PatchSim is under active development. Use the documentation for the installed
 version, and validate every configuration before running it.
@@ -27,8 +27,8 @@ version, and validate every configuration before running it.
   otherwise.
 - Output columns such as `I_0` use the zero-based row order from `PatchFile`; the
   suffix is not the patch identifier.
-- Examples describe behavior in the current code. Planned plugin, solver, and
-  contact-generation features are not documented as available.
+- Examples describe behavior in the current code. Planned plugin and calibration
+  features are not documented as available.
 
 ```{toctree}
 :maxdepth: 2

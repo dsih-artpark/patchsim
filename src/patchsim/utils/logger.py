@@ -55,6 +55,8 @@ def setup_logger(model_name, config, num_patches, patches, base_model):
     logger.info(f"SeedFile: {config['SeedFile']}")
     logger.info(f"NetworkFile: {config['NetworkFile']}")
     logger.info(f"OutputDir: {config['OutputDir']}")
+    logger.info(f"Solver: {config['Solver']}")
+    logger.info(f"TimeStep: {config['TimeStep']}")
     logger.info(f"TMax: {config['TMax']}")
     logger.info(f"Num patches: {num_patches}")
     logger.info(f"Patch list: {patches}")
