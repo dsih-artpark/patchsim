@@ -1,373 +1,260 @@
 # Configuration
 
-PatchSim simulations are configured using YAML files. This guide documents every configuration field with examples.
+PatchSim reads one YAML mapping plus CSV files for patches, seeds, and optionally
+a network. Run `patchsim validate -c CONFIG` before `patchsim run`.
 
-## Configuration Structure
+## Conventions
 
-A PatchSim config file has four main sections:
+- Field names are case-sensitive. Use the spelling shown on this page.
+- Relative file paths are resolved from the directory containing the YAML file.
+- Patch identifiers must match exactly across all CSV files.
+- Patch identifiers should be unique. Output indices follow `PatchFile` row order.
+- Transition keys use `SOURCE -> TARGET`.
+- Quote transition expressions. This keeps YAML parsing predictable.
+- Use a separate `OutputDir` for each retained scenario because the CSV and PNG
+  are overwritten on rerun.
 
-1. **I/O & Metadata** – Files and output location
-2. **Model Definition** – Compartments, parameters, transitions
-3. **Data** – Initial conditions and network topology
-4. **Simulation Control** – Time steps and solver settings
+## Active fields
 
----
+| Field | Required | Meaning |
+| --- | --- | --- |
+| `PatchFile` | Yes | Patch identifiers and positive populations |
+| `SeedFile` | Yes | Initial compartment values for each seeded patch |
+| `OutputDir` | Yes | Root directory for `runs`, `plots`, and `logs` |
+| `Transitions` | Yes | Non-empty arrow-to-expression mapping |
+| `TMax` | Yes | Positive integer; outputs times `0` through `TMax - 1` |
+| `ModelName` | For `run` | Identifier used in output filenames |
+| `NetworkFile` | No | Day-zero network CSV; `null` creates a zero matrix |
+| `compartments` | No | Ordered compartment names; inferred from `SeedFile` if absent |
+| `Parameters` | No | Global names available to transition expressions |
+| `PatchParameters` | No | Parsed patch overrides; see the limitation below |
 
-## I/O and Metadata
+`Compartments` with an uppercase `C` is also accepted for compatibility.
+`compartments` is the documented spelling.
 
-### ModelName
-
-**Type:** String  
-**Required:** Yes  
-**Description:** Unique identifier for the simulation. Used in output filenames.
+## File paths and output
 
 ```yaml
-ModelName: my-sir-model
+ModelName: baseline
+PatchFile: data/patch/patch-population.csv
+SeedFile: data/seeds/seed-initial.csv
+NetworkFile: data/networks/network-static.csv
+OutputDir: output/baseline
+TMax: 60
 ```
 
-### OutputDir
+If this YAML file is `/work/study/config.yaml`, `OutputDir: output/baseline`
+resolves to `/work/study/output/baseline`, regardless of the shell's current
+directory.
 
-**Type:** File path  
-**Required:** Yes  
-**Description:** Directory where results (CSV, plots, logs) are saved. Created if it doesn't exist.
+## Patch file
 
-```yaml
-OutputDir: output/results
-```
+`PatchFile` must contain patch and population columns. Their capitalization is
+matched case-insensitively.
 
-### PatchFile
-
-**Type:** File path  
-**Required:** Yes  
-**Description:** CSV file defining patch (region) names and total populations. Must have columns: `patch`, `population`.
-
-**Example file** (`data/patch/patches.csv`):
 ```csv
 patch,population
-PatchA,1000
-PatchB,500
+A,1000
+B,500
 ```
 
-```yaml
-PatchFile: data/patch/patches.csv
-```
+Populations must be positive. Row order is significant: patch `A` above becomes
+output suffix `_0`, and patch `B` becomes `_1`.
 
-### SeedFile
+## Seed file
 
-**Type:** File path  
-**Required:** Yes  
-**Description:** CSV file with initial compartment values for each patch. Must have columns: `patch` + all compartment names.
+`SeedFile` must use the exact lowercase column name `patch` followed by one
+column per compartment:
 
-**Example file** (`data/seeds/initial.csv`):
 ```csv
 patch,S,I,R
-PatchA,950,50,0
-PatchB,450,50,0
+A,999,1,0
+B,500,0,0
 ```
 
-Constraints:
-- One row per patch
-- Compartment values must be non-negative
-- Sum of values per patch must equal population in PatchFile
+For every seed row:
 
-```yaml
-SeedFile: data/seeds/initial.csv
-```
+- the patch must exist in `PatchFile`;
+- all compartment values must be non-negative; and
+- the compartment sum must equal that patch's population within `1e-6`.
 
-### NetworkFile
+If `compartments` is provided, the seed compartment columns must match it
+exactly. If it is omitted, PatchSim infers compartments from all seed columns
+other than `patch`.
 
-**Type:** File path or `null`  
-**Required:** No (default: `null`)  
-**Description:** CSV file describing transmission links between patches. Required for multi-patch simulations. Ignored for single-patch models.
+## Network file
 
-**Example file** (`data/networks/network.csv`):
+`NetworkFile` uses:
+
 ```csv
 day,source,target,weight
-0,PatchA,PatchA,0.9
-0,PatchA,PatchB,0.1
-0,PatchB,PatchB,0.9
-0,PatchB,PatchA,0.1
+0,A,A,0.9
+0,A,B,0.1
+0,B,A,0.1
+0,B,B,0.9
 ```
 
-Columns:
-- `day` – Time index the weights take effect from. Use `0` for a static network.
-- `source` – Source patch (origin of transmission)
-- `target` – Target patch (receives transmission)
-- `weight` – Transmission weight (higher = more transmission)
+Current behavior is precise:
 
-Include a self-loop (`source == target`) for each patch so within-patch
-transmission occurs. Weights are used as given (not auto-normalized); a common
-convention is for each source patch's outgoing weights to sum to 1.
+- only rows with `day == 0` are loaded;
+- weights must be non-negative;
+- weights are not normalized;
+- omitted matrix entries remain zero; and
+- a repeated `(source, target)` pair is overwritten by its last day-zero row.
 
-```yaml
-NetworkFile: data/networks/network.csv
-```
+The matrix is stored as `W[source, target]`. The runtime computes the infectious
+pressure for row patch $i$ as
 
-Or for single-patch:
+$$
+\lambda_i = \sum_j W_{ij}\frac{I_j}{N_j}.
+$$
 
-```yaml
-NetworkFile: null
-```
+Therefore, in the current implementation, `source` selects the focal matrix row
+and `target` selects the infectious patch contributing to that row. See
+[Network design](network-design.md) before constructing a custom matrix.
 
----
+If `NetworkFile` is missing or `null`, PatchSim creates a zero matrix. In a
+multi-patch run this means no network infectious pressure. A single-patch run
+does not apply network coupling.
 
-## Model Definition
-
-### compartments
-
-**Type:** List of strings  
-**Required:** No (inferred from SeedFile if omitted)  
-**Description:** List of epidemiological state variables. If not provided, inferred from SeedFile columns.
+## Model definition
 
 ```yaml
-compartments:
-  - S    # Susceptible
-  - E    # Exposed
-  - I    # Infectious
-  - R    # Recovered
-```
+compartments: [S, I, R]
 
-Common compartments:
-- `S` – Susceptible
-- `E` – Exposed
-- `I` – Infectious
-- `R` – Recovered
-- `D` – Deceased
-- `V` – Vaccinated
-
-### Parameters
-
-**Type:** Dictionary of name → number  
-**Required:** Yes  
-**Description:** Global per-capita transition rates. Available in all transition expressions. Can be overridden per-patch in `PatchParameters`.
-
-**Example:**
-```yaml
 Parameters:
-  beta: 0.5      # Transmission rate (contacts per individual per day)
-  sigma: 0.2     # Progression rate (1 / incubation period)
-  gamma: 0.1     # Recovery rate (1 / infectious period)
-```
-
-**Key point:** Parameters are per-capita rates. See [Rate Multiplication](rate-multiplication.md) for how rates interact with compartments.
-
-### Transitions
-
-**Type:** Dictionary of `compartment -> compartment` → expression  
-**Required:** Yes  
-**Description:** Define movement between compartments using arrow syntax and mathematical expressions.
-
-**Syntax:** `SOURCE -> TARGET: expression`
-
-**Example (SIR):**
-```yaml
-Transitions:
-  S -> I: "beta * S * I"        # New infections
-  I -> R: "gamma * I"           # Recoveries
-```
-
-**Example (SEIR):**
-```yaml
-Transitions:
-  S -> E: "beta * S * I"        # Infection
-  E -> I: "sigma * E"           # Progression to infectious
-  I -> R: "gamma * I"           # Recovery
-```
-
-**Expression rules:**
-- Use compartment names (e.g., `S`, `I`) for counts
-- Use parameter names (e.g., `beta`, `gamma`) for rates
-- Python operators allowed: `*`, `+`, `-`, `/`, `**`, `and`, `or`
-- Only identifiers that are compartments or parameters allowed
-- **If the expression does *not* mention the source compartment, it is treated
-  as a per-capita rate and multiplied by the source compartment automatically.
-  If it *does* mention the source, it is used as the flow as-is** (so `I -> R: "gamma"`
-  and `I -> R: "gamma * I"` are equivalent — both give a flow of `gamma * I`).
-  See [Rate Multiplication](rate-multiplication.md).
-- For an `S -> I`/`S -> E` infection transition in a multi-patch network, an
-  expression containing `beta` becomes the network force of infection
-  `beta * S * Σⱼ Wᵢⱼ Iⱼ/Nⱼ`. In a single-patch model, make the dependence on `I`
-  explicit (e.g. `beta * I` or `beta * S * I / (S + I + R)`).
-
-**Valid expressions:**
-```yaml
-S -> I: "beta"           # Multi-patch: network force of infection (beta * S * FOI)
-S -> I: "beta * S * I / (S + I + R)"  # Single-patch mass action (explicit)
-E -> I: "sigma"          # equivalent to "sigma * E"
-I -> R: "gamma * I"      # equivalent to "gamma"
-R -> S: "rho"            # Waning immunity (equivalent to "rho * R")
-```
-
-**Invalid expressions:**
-```yaml
-S -> I: "unknown_param"  # Error: unknown parameter
-S -> I: "S / 0"          # Error: division issues caught at runtime
-```
-
----
-
-## Patch-Specific Parameters (Optional)
-
-### PatchParameters
-
-**Type:** Dictionary of patch name → parameter overrides  
-**Required:** No  
-**Description:** Override global parameters for specific patches. Useful for spatial heterogeneity.
-
-```yaml
-Parameters:
-  beta: 0.5
+  beta: 0.08
   gamma: 0.1
 
+Transitions:
+  "S -> I": "beta"
+  "I -> R": "gamma * I"
+```
+
+Parameter and compartment names become identifiers in transition expressions.
+Names are case-sensitive.
+
+### Transition expression rules
+
+The current evaluator accepts:
+
+- finite real numeric literals;
+- parameter and compartment names;
+- binary `+`, `-`, `*`, `/`, `//`, `%`, and `**`; and
+- unary `+` and `-`.
+
+Function calls, attribute access, indexing, comparisons, booleans, conditionals,
+and comprehensions are rejected. `//` and `%` are accepted by the current
+evaluator, but they introduce discontinuities and should be avoided in rate
+expressions.
+
+An expression that does not mention its source compartment is treated as a
+per-capita rate and multiplied by the source:
+
+```yaml
+"I -> R": "gamma"       # flow = gamma * I
+```
+
+If the source compartment appears as an identifier, the expression is already a
+flow and is used as written:
+
+```yaml
+"I -> R": "gamma * I"   # same flow
+```
+
+See [Rate multiplication](rate-multiplication.md) for edge cases and examples.
+
+### Infection transitions
+
+For a multi-patch ODE run, transitions from `S` to `I` or `E` are additionally
+scaled by the network infectious pressure. The built-in templates therefore use:
+
+```yaml
+"S -> I": "beta"
+```
+
+This produces $\beta S_i\lambda_i$ in a multi-patch run.
+
+For a one-patch frequency-dependent SIR model, make the infectious proportion
+explicit because network coupling is not applied:
+
+```yaml
+"S -> I": "beta * I / (S + I + R)"
+```
+
+Because this expression does not contain `S`, PatchSim multiplies it by `S`,
+giving $\beta SI/N$.
+
+## Patch parameters
+
+The accepted shape is a list of patch records:
+
+```yaml
 PatchParameters:
-  PatchA:
-    beta: 0.8    # Higher transmission in PatchA
-  PatchB:
-    beta: 0.3    # Lower transmission in PatchB
+  - patch: A
+    parameters:
+      beta: 0.12
+  - patch: B
+    parameters:
+      beta: 0.05
 ```
 
-Constraints:
-- Keys must match patch names from PatchFile
-- Only override parameters you need to change
-- Overrides are merged with global Parameters
+Patch names are validated, and each override is merged with the global parameter
+mapping during setup.
 
----
+:::{warning}
+The current CLI ODE runner still evaluates transitions with global `Parameters`.
+It parses and logs `PatchParameters` but does not apply the overrides to the ODE.
+Do not rely on patch-specific values until solver integration is completed.
+:::
 
-## Simulation Control
+## Accepted compatibility fields
 
-### TMax
-
-**Type:** Positive integer  
-**Required:** Yes  
-**Description:** Number of time steps to simulate.
+The generated scaffold also contains:
 
 ```yaml
-TMax: 100
+Logging: false
+Tolerance: 1.0e-8
+MaxIter: 10000
+StartDate: "2020-01-01"
+EndDate: "2022-12-31"
 ```
 
-This simulates from time 0 to 99 (100 steps total).
+These fields are accepted by the schema but do not currently change the CLI ODE
+solver:
 
----
+- `Tolerance` and `MaxIter` are not passed to `odeint`;
+- `StartDate` and `EndDate` do not change the numeric time grid; and
+- `Logging: false` does not disable the timestamped run log.
 
-## Complete Examples
+`TMax` is the active simulation-length control.
 
-### Minimal SIR (Single Patch)
+## Complete example
 
 ```yaml
-ModelName: simple-sir
-OutputDir: output/sir
-PatchFile: data/patch/single.csv
-SeedFile: data/seeds/sir-init.csv
-NetworkFile: null
+ModelName: baseline
+PatchFile: data/patch/patch-population.csv
+SeedFile: data/seeds/seed-initial.csv
+NetworkFile: data/networks/network-static.csv
+OutputDir: output/baseline
+TMax: 60
 
-compartments:
-  - S
-  - I
-  - R
+compartments: [S, I, R]
 
 Parameters:
-  beta: 0.5
+  beta: 0.08
   gamma: 0.1
 
 Transitions:
-  S -> I: "beta"
-  I -> R: "gamma"
-
-TMax: 100
+  "S -> I": "beta"
+  "I -> R": "gamma * I"
 ```
 
-### SEIR with Waning Immunity
-
-```yaml
-ModelName: seir-waning
-OutputDir: output/seir
-PatchFile: data/patch/patches.csv
-SeedFile: data/seeds/seir-init.csv
-NetworkFile: null
-
-compartments:
-  - S
-  - E
-  - I
-  - R
-
-Parameters:
-  beta: 0.5    # Transmission rate
-  sigma: 0.2   # Progression (1/latency)
-  gamma: 0.1   # Recovery (1/infectious)
-  rho: 0.01    # Waning immunity
-
-Transitions:
-  S -> E: "beta * I"   # Exposure
-  E -> I: "sigma"      # Progression
-  I -> R: "gamma"      # Recovery
-  R -> S: "rho"        # Loss of immunity
-
-TMax: 365
-```
-
-### Multi-Patch with Heterogeneous Transmission
-
-```yaml
-ModelName: network-sir
-OutputDir: output/network
-PatchFile: data/patch/regions.csv
-SeedFile: data/seeds/network-init.csv
-NetworkFile: data/networks/routes.csv
-
-compartments:
-  - S
-  - I
-  - R
-
-Parameters:
-  beta: 0.3
-  gamma: 0.1
-
-PatchParameters:
-  Urban:
-    beta: 0.6      # Higher transmission in cities
-  Rural:
-    beta: 0.2      # Lower transmission in rural areas
-
-Transitions:
-  S -> I: "beta * I"
-  I -> R: "gamma"
-
-TMax: 200
-```
-
----
-
-## Validation
-
-Before running, validate your configuration:
+Validate it with:
 
 ```bash
 patchsim validate -c config.yaml
 ```
 
-This checks:
-- ✅ All required fields present
-- ✅ Files exist and are readable
-- ✅ Compartments match seed file
-- ✅ Transitions reference valid compartments/parameters
-- ✅ Seed values are consistent
-
-### Common Validation Errors
-
-| Error | Cause | Fix |
-|-------|-------|-----|
-| `Missing required field 'TMax'` | TMax not in config | Add `TMax: N` |
-| `Compartment mismatch` | Seed columns ≠ compartments | Align seed file with compartments |
-| `Unknown names in expression` | Typo in transition | Check parameter/compartment spelling |
-| `Refusing to overwrite` | OutputDir exists | Use different directory or `--force` |
-
----
-
-## Next Steps
-
-- **[Getting Started](getting-started.md)** – Hands-on walkthrough
-- **[CLI Reference](cli-reference.md)** – Command documentation
-- **[Mathematical Model](mathematical-model.md)** – Equations and rate multiplication
-- **[Network Design](network-design.md)** – Multi-patch topology
+Use `patchsim validate --schema` when integrating an editor or another config
+tool.

@@ -1,323 +1,144 @@
-# Mathematical Model
+# Mathematical model
 
-PatchSim implements continuous-time compartmental disease models using ordinary differential equations (ODEs).
+PatchSim represents each patch with continuous-valued compartments and
+transitions between them. The current CLI solves the resulting ordinary
+differential equations (ODEs).
 
-## Key Principle: Rate Multiplication
+## Transition flow
 
-**The foundational rule:** In any transition, the flow is the per-capita rate multiplied by the source compartment count.
+For a transition from compartment $A$ to compartment $B$, let $F_{A\to B}$ be
+the flow evaluated from the YAML expression. PatchSim contributes
 
-For a transition `A -> B` with rate expression $r$:
+$$
+\frac{dA}{dt} = -F_{A\to B},
+\qquad
+\frac{dB}{dt} = F_{A\to B}.
+$$
 
-$$\frac{dA}{dt} = -r \cdot A, \quad \frac{dB}{dt} = +r \cdot A$$
+The expression-to-flow rule is:
 
-**Important:** You only specify the per-capita rate in your transition expression. PatchSim automatically multiplies by the source compartment. This means:
+$$
+F_{A\to B} =
+\begin{cases}
+A\,r(\mathbf{x}, \mathbf{p}), & \text{if the expression does not name } A,\\
+r(\mathbf{x}, \mathbf{p}), & \text{if the expression names } A.
+\end{cases}
+$$
+
+For example, both recovery expressions below produce $\gamma I$:
 
 ```yaml
-Transitions:
-  S -> I: "beta"              # Not "beta * S"
-  I -> R: "gamma"             # Not "gamma * I"
+"I -> R": "gamma"
+"I -> R": "gamma * I"
 ```
 
-The framework assumes:
-- `beta` is the per-capita transmission rate
-- `gamma` is the per-capita recovery rate
-- Flow is calculated as $\text{rate} \times \text{source compartment}$
+See [Rate multiplication](rate-multiplication.md) for the exact expression
+rules.
 
-See [Rate Multiplication](rate-multiplication.md) for detailed explanation and examples.
+## Single-patch SIR
 
----
-
-## Single-Patch SIR Model
-
-The basic susceptible-infectious-recovered model for a single patch.
-
-### Compartments
-
-- **S** – Susceptible individuals
-- **I** – Infectious individuals  
-- **R** – Recovered individuals
-
-### Parameters
-
-- **β** – Per-capita transmission rate (contacts per individual per day)
-- **γ** – Per-capita recovery rate (1 / infectious period)
-
-### Equations
-
-$$\frac{dS}{dt} = -\beta S I$$
-
-$$\frac{dI}{dt} = \beta S I - \gamma I$$
-
-$$\frac{dR}{dt} = \gamma I$$
-
-### Configuration
+Network coupling is not applied when the model has one patch. A
+frequency-dependent SIR model can be written as:
 
 ```yaml
-compartments:
-  - S
-  - I
-  - R
-
+compartments: [S, I, R]
 Parameters:
-  beta: 0.5    # Transmission rate
-  gamma: 0.1   # Recovery rate (so 1/gamma = 10 days infectious)
-
-Transitions:
-  S -> I: "beta * I"    # Bimolecular: susceptible × infectious
-  I -> R: "gamma"       # Unimolecular: infected recover
-```
-
----
-
-## Multi-Patch Network-Coupled SIR
-
-For spatial transmission between patches.
-
-### Setup
-
-Let:
-- $S_i, I_i, R_i$ = compartments in patch $i$
-- $N_i = S_i + I_i + R_i$ = total population in patch $i$
-- $W_{ij}$ = network weight from source patch $j$ to target patch $i$ (how much transmission flows from j to i)
-
-### Force of Infection
-
-The per-capita force of infection in patch $i$ aggregates infectious pressure from all patches:
-
-$$\lambda_i(t) = \sum_{j=1}^{n} W_{ij} \frac{I_j}{N_j}$$
-
-This represents the probability that a susceptible in patch $i$ contacts an infected individual from patch $j$.
-
-### Equations
-
-$$\frac{dS_i}{dt} = -\beta S_i \lambda_i(t)$$
-
-$$\frac{dI_i}{dt} = \beta S_i \lambda_i(t) - \gamma I_i$$
-
-$$\frac{dR_i}{dt} = \gamma I_i$$
-
-### Configuration
-
-```yaml
-compartments:
-  - S
-  - I
-  - R
-
-Parameters:
-  beta: 0.5
+  beta: 0.2
   gamma: 0.1
-
 Transitions:
-  S -> I: "beta * I"
-  I -> R: "gamma"
-
-NetworkFile: data/networks/network.csv
+  "S -> I": "beta * I / (S + I + R)"
+  "I -> R": "gamma"
 ```
 
-**Network file** (`data/networks/network.csv`):
-```csv
-source,target,weight
-PatchA,PatchB,0.2
-PatchB,PatchA,0.1
-```
+With $N=S+I+R$, this gives:
 
-Network weights can be:
-- 0 (no connection)
-- 0–1 (partial transmission)
-- ≥1 (if modeling strong links, e.g., commuting amplification)
+$$
+\frac{dS}{dt} = -\beta S\frac{I}{N},
+$$
 
----
+$$
+\frac{dI}{dt} = \beta S\frac{I}{N} - \gamma I,
+$$
 
-## SEIR Model (With Latency)
+$$
+\frac{dR}{dt} = \gamma I.
+$$
 
-Adds an exposed (latent) compartment for disease incubation.
+An explicit density-dependent expression such as `"beta * S * I"` is also
+accepted, but it represents a different model and requires a correspondingly
+scaled $\beta$.
 
-### Compartments
+## Multi-patch infectious pressure
 
-- **S** – Susceptible
-- **E** – Exposed (infected but not yet infectious)
-- **I** – Infectious
-- **R** – Recovered
+For patch $i$, let $I_i$ be infectious population and $N_i$ total population.
+The current runtime computes
 
-### Parameters
+$$
+\lambda_i(t) = \sum_{j=1}^{n} W_{ij}\frac{I_j(t)}{N_j(t)}.
+$$
 
-- **β** – Per-capita transmission rate
-- **σ** – Per-capita progression rate (1 / incubation period)
-- **γ** – Per-capita recovery rate
+`W[i, j]` is loaded from the day-zero CSV row whose `source` is patch $i$ and
+whose `target` is patch $j$. Thus row $i$ selects the infectious patches that
+contribute to focal patch $i$. See [Network design](network-design.md) for the
+file convention.
 
-### Equations
-
-$$\frac{dS}{dt} = -\beta S I$$
-
-$$\frac{dE}{dt} = \beta S I - \sigma E$$
-
-$$\frac{dI}{dt} = \sigma E - \gamma I$$
-
-$$\frac{dR}{dt} = \gamma I$$
-
-### Configuration
+For an `S -> I` or `S -> E` transition in a multi-patch ODE run, PatchSim
+multiplies the local flow by $\lambda_i$. The built-in SIR template uses:
 
 ```yaml
-compartments:
-  - S
-  - E
-  - I
-  - R
-
-Parameters:
-  beta: 0.5      # Transmission rate
-  sigma: 0.2     # Progression (1/incubation, typically 1–5 days)
-  gamma: 0.1     # Recovery (1/infectious)
-
-Transitions:
-  S -> E: "beta * I"
-  E -> I: "sigma"
-  I -> R: "gamma"
+"S -> I": "beta"
+"I -> R": "gamma * I"
 ```
 
----
+The local source rule first gives $\beta S_i$, and network coupling gives:
 
-## SIRS Model (With Waning Immunity)
+$$
+\frac{dS_i}{dt} = -\beta S_i\lambda_i,
+$$
 
-Susceptible → Infectious → Recovered → Susceptible (loss of immunity).
+$$
+\frac{dI_i}{dt} = \beta S_i\lambda_i - \gamma I_i,
+$$
 
-### Compartments
+$$
+\frac{dR_i}{dt} = \gamma I_i.
+$$
 
-- **S** – Susceptible
-- **I** – Infectious
-- **R** – Recovered (with temporary immunity)
+Weights are not probabilities unless the input author makes them so. PatchSim
+does not normalize $W$.
 
-### Parameters
+## Other built-in templates
 
-- **β** – Per-capita transmission rate
-- **γ** – Per-capita recovery rate
-- **ρ** – Per-capita waning immunity rate
+The CLI can scaffold these transition structures:
 
-### Equations
+| Template | Compartments | Additional transition |
+| --- | --- | --- |
+| `sir` | `S, I, R` | `I -> R` |
+| `seir` | `S, E, I, R` | `E -> I` |
+| `sirs` | `S, I, R` | `R -> S` |
+| `sis` | `S, I` | `I -> S` |
 
-$$\frac{dS}{dt} = -\beta S I + \rho R$$
+They are YAML templates using the same transition engine, not separate
+hard-coded model classes.
 
-$$\frac{dI}{dt} = \beta S I - \gamma I$$
+## Numerical integration
 
-$$\frac{dR}{dt} = \gamma I - \rho R$$
+The CLI uses `scipy.integrate.odeint`, SciPy's interface to LSODA. LSODA chooses
+internal step sizes adaptively; `TMax` only defines reporting times:
 
-### Configuration
+$$
+t = 0, 1, \ldots, \mathrm{TMax}-1.
+$$
 
-```yaml
-compartments:
-  - S
-  - I
-  - R
+The current CLI does not expose solver selection or pass the scaffold's
+`Tolerance` and `MaxIter` fields to `odeint`.
 
-Parameters:
-  beta: 0.5      # Transmission
-  gamma: 0.1     # Recovery
-  rho: 0.01      # Waning immunity (1/duration of immunity)
+## Assumptions and limits
 
-Transitions:
-  S -> I: "beta * I"
-  I -> R: "gamma"
-  R -> S: "rho"
-```
-
----
-
-## SIS Model (Acute, No Immunity)
-
-For diseases without acquired immunity (e.g., some bacterial infections).
-
-### Compartments
-
-- **S** – Susceptible
-- **I** – Infectious
-
-### Parameters
-
-- **β** – Per-capita transmission rate
-- **γ** – Per-capita recovery rate (to susceptible, not recovered)
-
-### Equations
-
-$$\frac{dS}{dt} = -\beta S I + \gamma I$$
-
-$$\frac{dI}{dt} = \beta S I - \gamma I$$
-
-### Configuration
-
-```yaml
-compartments:
-  - S
-  - I
-
-Parameters:
-  beta: 0.5
-  gamma: 0.1
-
-Transitions:
-  S -> I: "beta * I"
-  I -> S: "gamma"
-```
-
----
-
-## Custom Models
-
-You can define any compartmental model by:
-
-1. **List your compartments** (e.g., S, V, E, I, H, D)
-2. **Define per-capita rates** as Parameters
-3. **Specify transitions** using the `SOURCE -> TARGET: rate` syntax
-4. **Provide initial conditions** in SeedFile
-
-Example: SEIRD (with deaths)
-
-```yaml
-compartments:
-  - S
-  - E
-  - I
-  - R
-  - D
-
-Parameters:
-  beta: 0.5
-  sigma: 0.2
-  gamma: 0.09   # Recovery rate
-  mu: 0.01      # Case fatality rate
-
-Transitions:
-  S -> E: "beta * I"
-  E -> I: "sigma"
-  I -> R: "gamma"
-  I -> D: "mu"
-```
-
----
-
-## Numerical Integration
-
-PatchSim solves ODEs using **scipy.integrate.odeint** (implicit multistep solver). 
-
-- Default tolerance: good for most applications
-- Time stepping: automatic (user specifies total steps as `TMax`)
-- Assumes continuous-time dynamics over discrete reporting intervals
-
----
-
-## Key Assumptions
-
-1. **Well-mixed patches** – Within a patch, contacts are random and uniform
-2. **Compartments are continuous** – Populations treated as real numbers (not individuals)
-3. **Rates are constant** – Parameters don't change with time (except per-patch overrides)
-4. **No vital dynamics** – No births or deaths (except disease-related)
-5. **Markovian** – Next state depends only on current state, not history
-
----
-
-## Next Steps
-
-- **[Rate Multiplication](rate-multiplication.md)** – Deep dive into how rates work
-- **[Configuration](configuration.md)** – Setting up your model
-- **[Network Design](network-design.md)** – Multi-patch topology
-- **[Getting Started](getting-started.md)** – Hands-on examples
+- Compartments are continuous real-valued states.
+- Each patch is well mixed within its compartment definitions.
+- Transition expressions have no explicit time variable.
+- Only compartment transfers are represented; births, deaths, or imports require
+  explicit model structure.
+- Patch-specific parameter records are not yet applied by the CLI ODE runner.
+- Network rows after `day == 0` are currently ignored.

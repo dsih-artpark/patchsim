@@ -7,8 +7,9 @@ from sphinx.highlighting import lexers as sphinx_lexers  # type: ignore
 # Add project root to sys.path
 sys.path.insert(0, os.path.abspath(".."))
 
-project = "patchsim"
+project = "PatchSim"
 author = ""
+html_title = "PatchSim"
 
 extensions = [
     "myst_parser",
@@ -30,7 +31,9 @@ myst_enable_extensions = [
     "html_admonition",
     "html_image",
     "colon_fence",
+    "dollarmath",
 ]
+myst_heading_anchors = 3
 
 # Register a CSV lexer name for Pygments; use named lookup and fall back to text.
 try:

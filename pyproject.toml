@@ -42,7 +42,7 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/dsih-artpark/patchsim"
 Repository = "https://github.com/dsih-artpark/patchsim"
-Documentation = "https://dsih-artpark-patchsim.readthedocs.io/"
+Documentation = "https://patchsim.readthedocs.io/"
 
 [project.optional-dependencies]
 test = [
