@@ -47,6 +47,7 @@ Documentation = "https://patchsim.readthedocs.io/"
 [project.optional-dependencies]
 geo = [
     "geopandas>=1.1",
+    "pyproj>=3.5",
 ]
 
 test = [

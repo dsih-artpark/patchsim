@@ -318,9 +318,9 @@ def test_generated_csv_loads_through_existing_simulation_setup(tmp_path, regions
     network = tmp_path / "network.csv"
     patch_file = tmp_path / "patches.csv"
     seed_file = tmp_path / "seeds.csv"
-    regions.to_csv(source, index=False)
-    pd.DataFrame({"patch": ["A", "B"], "population": [100, 200]}).to_csv(patch_file, index=False)
-    pd.DataFrame({"patch": ["A", "B"], "S": [99, 200], "I": [1, 0], "R": [0, 0]}).to_csv(seed_file, index=False)
+    regions.assign(id=["001", "NA"]).to_csv(source, index=False)
+    patch_file.write_text("patch,population\n001,100\nNA,200\n", encoding="utf-8")
+    seed_file.write_text("patch,S,I,R\n001,99,1,0\nNA,200,0,0\n", encoding="utf-8")
     generate_contacts(
         source,
         network,
@@ -343,5 +343,5 @@ def test_generated_csv_loads_through_existing_simulation_setup(tmp_path, regions
         "Transitions": {"S -> I": "beta", "I -> R": "gamma * I"},
     }
     net, _state, patches, _count = setup_simulation(config)
-    assert patches == ["A", "B"]
+    assert patches == ["001", "NA"]
     np.testing.assert_allclose(net.network, [[0.8, 0.2], [0.2, 0.8]])

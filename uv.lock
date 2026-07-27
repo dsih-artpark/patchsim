@@ -1792,6 +1792,7 @@ docs = [
 ]
 geo = [
     { name = "geopandas" },
+    { name = "pyproj" },
 ]
 lint = [
     { name = "mypy" },
@@ -1825,6 +1826,7 @@ requires-dist = [
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.0.0" },
     { name = "pre-commit", marker = "extra == 'lint'", specifier = ">=3.0.0" },
     { name = "pydata-sphinx-theme", marker = "extra == 'docs'", specifier = ">=0.14" },
+    { name = "pyproj", marker = "extra == 'geo'", specifier = ">=3.5" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.5" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=8.3.5" },
     { name = "pytest-cov", marker = "extra == 'dev'" },
