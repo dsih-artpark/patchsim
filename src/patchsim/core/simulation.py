@@ -174,15 +174,18 @@ def load_config(config_path: str) -> dict[str, Any]:
 def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, float], list, int]:
     """Set up the simulation model and initial conditions."""
     # Load patch data (accept either case for the 'patch'/'population' columns)
-    patch_df = pd.read_csv(config["PatchFile"])
-    patch_col = next((c for c in patch_df.columns if c.lower() == "patch"), None)
-    pop_col = next((c for c in patch_df.columns if c.lower() == "population"), None)
+    patch_columns = pd.read_csv(config["PatchFile"], nrows=0).columns
+    patch_col = next((c for c in patch_columns if c.lower() == "patch"), None)
+    pop_col = next((c for c in patch_columns if c.lower() == "population"), None)
     if patch_col is None or pop_col is None:
         raise ValueError(
             f"PatchFile ({config['PatchFile']}) must have 'patch' and 'population' columns.\n"
-            f"Found columns: {list(patch_df.columns)}"
+            f"Found columns: {list(patch_columns)}"
         )
+    patch_df = pd.read_csv(config["PatchFile"], converters={patch_col: str})
     patches = patch_df[patch_col].tolist()
+    if any(not patch.strip() for patch in patches):
+        raise ValueError(f"PatchFile ({config['PatchFile']}) contains an empty patch identifier.")
     populations = patch_df.set_index(patch_col)[pop_col].to_dict()
 
     for p, pop in populations.items():
@@ -194,7 +197,7 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
             )
 
     # Load seed data
-    seed_df = pd.read_csv(config["SeedFile"])
+    seed_df = pd.read_csv(config["SeedFile"], converters={"patch": str})
     seed_compartments = [col for col in seed_df.columns if col != "patch"]
 
     configured_compartments = config.get("compartments", config.get("Compartments"))
@@ -247,7 +250,10 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
         network_matrix = np.zeros((num_patches, num_patches))
     else:
         # Multi-patch model
-        net_df = pd.read_csv(config["NetworkFile"])
+        net_df = pd.read_csv(
+            config["NetworkFile"],
+            converters={"source": str, "target": str},
+        )
         net_df = net_df[net_df["day"] == 0]
         patch_idx = {p: i for i, p in enumerate(patches)}
         network_matrix = np.zeros((num_patches, num_patches))
