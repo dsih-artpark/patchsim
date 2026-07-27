@@ -189,7 +189,7 @@ def _cmd_generate_contacts(args: argparse.Namespace) -> None:
     print(f"Wrote contacts to: {output_path}")
     print(f"Wrote validation report to: {report_path}")
     if args.normalize == "none":
-        unit = "scale * population**2 / km**decay" if args.kernel == "gravity" else "scale / km**decay"
+        unit = "scale * population_i * population_j / km**decay" if args.kernel == "gravity" else "scale / km**decay"
         print(f"Warning: unnormalized weights use raw kernel units ({unit}); they are not probabilities.")
 
 

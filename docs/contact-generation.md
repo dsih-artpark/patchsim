@@ -117,8 +117,8 @@ patchsim generate-contacts regions.csv raw-contacts.csv \
 
 The diagonal has the same units as the raw off-diagonal weights. Distance
 weights have units `scale / km**decay`; gravity weights have units
-`scale * population**2 / km**decay`. PatchSim uses them as coefficients, not
-probabilities.
+`scale * population_i * population_j / km**decay`. PatchSim uses them as
+coefficients, not probabilities.
 
 ## Polygon centroids
 

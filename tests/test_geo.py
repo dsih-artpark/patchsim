@@ -268,7 +268,8 @@ def test_generate_contacts_writes_stable_csv_and_validation_report(tmp_path, reg
         source,
         output,
         id_column="id",
-        kernel="distance",
+        population_column="population",
+        kernel="gravity",
         decay=2.0,
         min_distance_km=0.001,
         normalize="row",
@@ -285,6 +286,7 @@ def test_generate_contacts_writes_stable_csv_and_validation_report(tmp_path, reg
     assert edge_frame["day"].tolist() == [0, 0, 0, 0]
     assert report["normalization"]["final_weight_unit"] == "dimensionless"
     assert report["distance"]["unit"] == "km"
+    assert report["kernel"]["raw_weight_unit"] == "scale * population_i * population_j / km**decay"
     assert report["csv_sha256"] == hashlib.sha256(output_path.read_bytes()).hexdigest()
     assert json.loads(report_path.read_text(encoding="utf-8")) == report
 

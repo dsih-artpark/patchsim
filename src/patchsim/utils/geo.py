@@ -492,7 +492,9 @@ def generate_contacts(
             "decay": float(decay),
             "scale": float(scale) if scale is not None else 1.0,
             "min_distance_km": float(min_distance_km),
-            "raw_weight_unit": ("scale * population**2 / km**decay" if kernel == "gravity" else "scale / km**decay"),
+            "raw_weight_unit": (
+                "scale * population_i * population_j / km**decay" if kernel == "gravity" else "scale / km**decay"
+            ),
         },
         "normalization": {
             "mode": normalize,
