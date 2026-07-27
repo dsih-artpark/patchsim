@@ -19,6 +19,7 @@ from patchsim.core.simulation import (
     run_simulation,
     setup_simulation,
 )
+from patchsim.utils.geo import generate_contacts
 
 
 def _configure_logging(*, json_output: bool = False) -> None:
@@ -169,6 +170,29 @@ def _cmd_list_models(*, json_output: bool = False) -> list[dict[str, str]]:
     return models
 
 
+def _cmd_generate_contacts(args: argparse.Namespace) -> None:
+    output_path, report_path, _report = generate_contacts(
+        args.source,
+        args.output,
+        id_column=args.id_column,
+        population_column=args.population_column,
+        kernel=args.kernel,
+        decay=args.decay,
+        scale=args.scale,
+        min_distance_km=args.min_distance_km,
+        normalize=args.normalize,
+        self_weight=args.self_weight,
+        self_share=args.self_share,
+        centroid_crs=args.centroid_crs,
+        force=args.force,
+    )
+    print(f"Wrote contacts to: {output_path}")
+    print(f"Wrote validation report to: {report_path}")
+    if args.normalize == "none":
+        unit = "scale * population**2 / km**decay" if args.kernel == "gravity" else "scale / km**decay"
+        print(f"Warning: unnormalized weights use raw kernel units ({unit}); they are not probabilities.")
+
+
 def main() -> None:
     """Command-line interface for running the PatchSim simulation."""
     parser = argparse.ArgumentParser(
@@ -184,6 +208,8 @@ Examples:
     uv run patchsim run -c my-project/config.yaml
     uv run patchsim validate -c my-project/config.yaml
     uv run patchsim list-models
+    uv run patchsim generate-contacts centroids.csv contacts.csv --id-column id \
+        --kernel distance --decay 2 --min-distance-km 0.001 --normalize row --self-share 0.9
         """
         ),
     )
@@ -213,6 +239,30 @@ Examples:
     list_p = subparsers.add_parser("list-models", help="List available built-in models")
     list_p.add_argument("--json", action="store_true", help="Emit machine-readable JSON list")
 
+    contacts_p = subparsers.add_parser(
+        "generate-contacts",
+        help="Generate a validated spatial contact network",
+    )
+    contacts_p.add_argument("source", help="Centroid CSV, GeoJSON, JSON, or Shapefile input")
+    contacts_p.add_argument("output", help="Output edge-list CSV")
+    contacts_p.add_argument("--id-column", required=True, help="Identifier column in the source")
+    contacts_p.add_argument("--population-column", help="Positive population column required by gravity")
+    contacts_p.add_argument("--kernel", required=True, choices=["distance", "gravity"])
+    contacts_p.add_argument("--decay", required=True, type=float, help="Dimensionless distance-decay exponent")
+    contacts_p.add_argument(
+        "--min-distance-km",
+        required=True,
+        type=float,
+        help="Positive distance floor in kilometres",
+    )
+    contacts_p.add_argument("--normalize", required=True, choices=["none", "row"])
+    contacts_p.add_argument("--scale", type=float, help="Positive raw-kernel scale; only for normalization none")
+    diagonal = contacts_p.add_mutually_exclusive_group()
+    diagonal.add_argument("--self-weight", type=float, help="Raw diagonal weight for normalization none")
+    diagonal.add_argument("--self-share", type=float, help="Diagonal share in [0, 1) for row normalization")
+    contacts_p.add_argument("--centroid-crs", help="Projected CRS used to centroid polygon vector input")
+    contacts_p.add_argument("--force", action="store_true", help="Replace both output artifacts")
+
     args = parser.parse_args()
     json_mode = bool(getattr(args, "json", False) or getattr(args, "schema", False))
     _configure_logging(json_output=json_mode)
@@ -234,11 +284,13 @@ Examples:
             result = _cmd_list_models(json_output=args.json)
             if args.json:
                 _emit_json({"models": result})
+        elif args.command == "generate-contacts":
+            _cmd_generate_contacts(args)
         else:
             parser.print_help()
             raise SystemExit(2)
     except Exception as e:
-        logging.error(f"Simulation failed: {e}")
+        logging.error(f"Command failed: {e}")
         raise
 
 

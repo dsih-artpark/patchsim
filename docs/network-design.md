@@ -73,5 +73,6 @@ If `NetworkFile` is omitted or `null`, PatchSim creates a zero matrix. In a
 multi-patch run, network infectious pressure is then zero. A one-patch run does
 not use network coupling.
 
-PatchSim does not currently generate network files from geometry. Prepare the CSV
-before validation.
+Use [Contact generation](contact-generation.md) to build a validated day-zero
+network CSV from centroid, GeoJSON, or shapefile input. The generated file still
+uses this page's matrix orientation and is supplied through `NetworkFile`.

@@ -32,6 +32,7 @@ The CLI uses these conventions:
 | `validate` | Load and validate a configuration and its input files |
 | `run` | Run the ODE simulation and write artifacts |
 | `list-models` | List built-in project templates |
+| `generate-contacts` | Generate a validated spatial network CSV |
 
 ## `init`
 
@@ -139,6 +140,28 @@ Built-in models and templates:
 ```
 
 These are configuration templates, not separately implemented solver classes.
+
+## `generate-contacts`
+
+```bash
+patchsim generate-contacts SOURCE OUTPUT \
+  --id-column NAME \
+  --kernel {distance,gravity} \
+  --decay FLOAT \
+  --min-distance-km FLOAT \
+  --normalize {none,row}
+```
+
+Row normalization additionally requires `--self-share`. Unnormalized output
+requires `--scale` and `--self-weight`. Gravity additionally requires
+`--population-column`.
+
+The command writes `OUTPUT` and `OUTPUT.validation.json`. It refuses to replace
+either artifact unless `--force` is supplied. Vector input requires the `geo`
+optional dependency, and polygon input requires `--centroid-crs`.
+
+See [Contact generation](contact-generation.md) for formulas, units, complete
+options, and validation guidance.
 
 ## Version
 

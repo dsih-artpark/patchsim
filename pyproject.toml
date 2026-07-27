@@ -45,6 +45,10 @@ Repository = "https://github.com/dsih-artpark/patchsim"
 Documentation = "https://patchsim.readthedocs.io/"
 
 [project.optional-dependencies]
+geo = [
+    "geopandas>=1.1",
+]
+
 test = [
     "pytest>=8.3.5",
     "pytest-cov",
