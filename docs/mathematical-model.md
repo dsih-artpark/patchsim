@@ -131,9 +131,13 @@ chooses internal step sizes adaptively. `Solver: discrete` uses deterministic
 explicit Euler with one step per reporting interval:
 
 $$
-t_k = k\,\mathrm{TimeStep}, \qquad
-x_{k+1} = x_k + \mathrm{TimeStep}\,f(x_k).
+\Delta t_k = t_{k+1} - t_k, \qquad
+x_{k+1} = x_k + \Delta t_k\,f(x_k).
 $$
+
+CLI-generated grids are uniform, with `t_k = k * TimeStep` and
+`\Delta t_k = TimeStep`. Direct `NetworkModel.simulate_discrete` calls may
+supply an uneven increasing time grid.
 
 The discrete method can fail or be inaccurate when `TimeStep` is too large.
 Compare results at successively smaller intervals over the same horizon.

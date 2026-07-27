@@ -29,7 +29,7 @@ a network. Run `patchsim validate -c CONFIG` before `patchsim run`.
 | `NetworkFile` | No | Day-zero network CSV; `null` creates a zero matrix |
 | `compartments` | No | Ordered compartment names; inferred from `SeedFile` if absent |
 | `Parameters` | No | Global names available to transition expressions |
-| `PatchParameters` | No | Parsed patch overrides; see the limitation below |
+| `PatchParameters` | No | Per-patch parameter overrides |
 
 `Compartments` with an uppercase `C` is also accepted for compatibility.
 `compartments` is the documented spelling.
@@ -197,8 +197,9 @@ See [Rate multiplication](rate-multiplication.md) for edge cases and examples.
 
 ### Infection transitions
 
-For a multi-patch ODE run, transitions from `S` to `I` or `E` are additionally
-scaled by the network infectious pressure. The built-in templates therefore use:
+For a multi-patch run with either built-in solver, transitions from `S` to `I`
+or `E` are additionally scaled by the network infectious pressure. The built-in
+templates therefore use:
 
 ```yaml
 "S -> I": "beta"

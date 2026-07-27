@@ -50,8 +50,8 @@ For `Solver: ode`, PatchSim writes:
 The discrete solver replaces `_ode` with `_discrete` in the CSV and PNG names.
 The log and JSON run summary record the selected solver and `TimeStep`.
 
-The CSV and PNG are replaced by a rerun with the same `ModelName` and
-`OutputDir`. See [Results](results.md) for retention conventions.
+The CSV and PNG are replaced by a rerun with the same `ModelName`, `OutputDir`,
+and solver. See [Results](results.md) for retention conventions.
 
 ## Reproducible run checklist
 
