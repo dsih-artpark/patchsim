@@ -22,12 +22,14 @@ a network. Run `patchsim validate -c CONFIG` before `patchsim run`.
 | `SeedFile` | Yes | Initial compartment values for each seeded patch |
 | `OutputDir` | Yes | Root directory for `runs`, `plots`, and `logs` |
 | `Transitions` | Yes | Non-empty arrow-to-expression mapping |
-| `TMax` | Yes | Positive integer; outputs times `0` through `TMax - 1` |
+| `TMax` | Yes | Positive integer count of reporting points |
+| `Solver` | No | `ode` (default) or deterministic explicit Euler (`discrete`) |
+| `TimeStep` | No | Positive reporting-grid interval; defaults to `1.0` |
 | `ModelName` | For `run` | Identifier used in output filenames |
 | `NetworkFile` | No | Day-zero network CSV; `null` creates a zero matrix |
 | `compartments` | No | Ordered compartment names; inferred from `SeedFile` if absent |
 | `Parameters` | No | Global names available to transition expressions |
-| `PatchParameters` | No | Parsed patch overrides; see the limitation below |
+| `PatchParameters` | No | Per-patch parameter overrides |
 
 `Compartments` with an uppercase `C` is also accepted for compatibility.
 `compartments` is the documented spelling.
@@ -41,11 +43,40 @@ SeedFile: data/seeds/seed-initial.csv
 NetworkFile: data/networks/network-static.csv
 OutputDir: output/baseline
 TMax: 60
+Solver: ode
+TimeStep: 1.0
 ```
 
 If this YAML file is `/work/study/config.yaml`, `OutputDir: output/baseline`
 resolves to `/work/study/output/baseline`, regardless of the shell's current
 directory.
+
+## Solver and time grid
+
+The reporting grid contains `TMax` points:
+
+$$
+t_k = k\,\mathrm{TimeStep}, \qquad k = 0,\ldots,\mathrm{TMax}-1.
+$$
+
+`TMax` is a point count, not the final simulated time. PatchSim does not infer
+calendar units. If rates are per day, `TimeStep` must be in days.
+
+```yaml
+Solver: discrete
+TMax: 241
+TimeStep: 0.25
+```
+
+`Solver: ode` uses LSODA with adaptive internal steps; `TimeStep` controls only
+the reported times. `Solver: discrete` takes one deterministic explicit-Euler
+step per reporting interval. It uses floating-point compartment states and is
+not a stochastic or integer-state method.
+
+Euler accuracy is not automatic. Compare a run using `dt` with one using
+`dt / 2` over the same horizon. When halving `TimeStep`, use
+`TMax_fine = 2 * (TMax_coarse - 1) + 1`. A run that remains finite and
+non-negative has not thereby demonstrated convergence.
 
 ## Patch file
 
@@ -166,8 +197,9 @@ See [Rate multiplication](rate-multiplication.md) for edge cases and examples.
 
 ### Infection transitions
 
-For a multi-patch ODE run, transitions from `S` to `I` or `E` are additionally
-scaled by the network infectious pressure. The built-in templates therefore use:
+For a multi-patch run with either built-in solver, transitions from `S` to `I`
+or `E` are additionally scaled by the network infectious pressure. The built-in
+templates therefore use:
 
 ```yaml
 "S -> I": "beta"
@@ -200,13 +232,7 @@ PatchParameters:
 ```
 
 Patch names are validated, and each override is merged with the global parameter
-mapping during setup.
-
-:::{warning}
-The current CLI ODE runner still evaluates transitions with global `Parameters`.
-It parses and logs `PatchParameters` but does not apply the overrides to the ODE.
-Do not rely on patch-specific values until solver integration is completed.
-:::
+mapping during setup. Both built-in solvers use these merged parameters.
 
 ## Accepted compatibility fields
 
@@ -227,7 +253,7 @@ solver:
 - `StartDate` and `EndDate` do not change the numeric time grid; and
 - `Logging: false` does not disable the timestamped run log.
 
-`TMax` is the active simulation-length control.
+`TMax` and `TimeStep` define the reporting grid.
 
 ## Complete example
 
@@ -238,6 +264,8 @@ SeedFile: data/seeds/seed-initial.csv
 NetworkFile: data/networks/network-static.csv
 OutputDir: output/baseline
 TMax: 60
+Solver: ode
+TimeStep: 1.0
 
 compartments: [S, I, R]
 

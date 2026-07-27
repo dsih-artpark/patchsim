@@ -55,7 +55,8 @@ PatchSim aims to support a range of modelling features commonly used in metapopu
   - Random seed control and metadata logging
   - Version-tracked configurations
 - 📦 **Modularity**:
-  - Plug-in architecture for solvers, interventions, and input data pipelines
+  - Built-in ODE and discrete solvers consume the same validated spatial network
+    format
 
 ---
 

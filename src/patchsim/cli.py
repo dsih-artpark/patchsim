@@ -71,6 +71,8 @@ def _cmd_validate(config_path: str, *, json_output: bool = False, schema: bool =
             "model_name": config.get("ModelName"),
             "num_patches": num_patches,
             "patches": patches,
+            "solver": config["Solver"],
+            "time_step": config["TimeStep"],
         }
     return None
 

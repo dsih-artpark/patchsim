@@ -123,15 +123,25 @@ hard-coded model classes.
 
 ## Numerical integration
 
-The CLI uses `scipy.integrate.odeint`, SciPy's interface to LSODA. LSODA chooses
-internal step sizes adaptively; `TMax` only defines reporting times:
+The two built-in solvers use the same derivative function and differ only in
+numerical integration.
+
+`Solver: ode` uses `scipy.integrate.odeint`, SciPy's interface to LSODA. LSODA
+chooses internal step sizes adaptively. `Solver: discrete` uses deterministic
+explicit Euler with one step per reporting interval:
 
 $$
-t = 0, 1, \ldots, \mathrm{TMax}-1.
+\Delta t_k = t_{k+1} - t_k, \qquad
+x_{k+1} = x_k + \Delta t_k\,f(x_k).
 $$
 
-The current CLI does not expose solver selection or pass the scaffold's
-`Tolerance` and `MaxIter` fields to `odeint`.
+CLI-generated grids are uniform, with `t_k = k * TimeStep` and
+`\Delta t_k = TimeStep`. Direct `NetworkModel.simulate_discrete` calls may
+supply an uneven increasing time grid.
+
+The discrete method can fail or be inaccurate when `TimeStep` is too large.
+Compare results at successively smaller intervals over the same horizon.
+`Tolerance` and `MaxIter` are not passed to `odeint`.
 
 ## Assumptions and limits
 
@@ -140,5 +150,5 @@ The current CLI does not expose solver selection or pass the scaffold's
 - Transition expressions have no explicit time variable.
 - Only compartment transfers are represented; births, deaths, or imports require
   explicit model structure.
-- Patch-specific parameter records are not yet applied by the CLI ODE runner.
+- Patch-specific parameter records are applied by both built-in solvers.
 - Network rows after `day == 0` are currently ignored.

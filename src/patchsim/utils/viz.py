@@ -4,7 +4,16 @@ import os
 import matplotlib.pyplot as plt
 
 
-def plot_patch_subplots(t_range, out_ode, patches, output_dir, model_name, patch_parameters=None, compartments=None):
+def plot_patch_subplots(
+    t_range,
+    out_ode,
+    patches,
+    output_dir,
+    model_name,
+    patch_parameters=None,
+    compartments=None,
+    solver="ode",
+):
     """
     Plots all patches as subplots in a single figure and saves the figure.
     """
@@ -21,7 +30,8 @@ def plot_patch_subplots(t_range, out_ode, patches, output_dir, model_name, patch
         comps = compartments or [k[: -len(f"_{i}")] for k in out_ode if k.endswith(f"_{i}")]
         for c in comps:
             ax.plot(t_range, out_ode[f"{c}_{i}"], label=c)
-        title = f"Patch {patch} (ODE)"
+        solver_label = "ODE" if solver == "ode" else "Discrete"
+        title = f"Patch {patch} ({solver_label})"
         if patch_parameters and patch in patch_parameters:
             params = patch_parameters[patch]
             param_str = ", ".join(f"{k}={v}" for k, v in params.items())
@@ -35,5 +45,5 @@ def plot_patch_subplots(t_range, out_ode, patches, output_dir, model_name, patch
         fig.delaxes(axes[j])
     plt.tight_layout()
     os.makedirs(output_dir, exist_ok=True)
-    plt.savefig(os.path.join(output_dir, f"patch_timeseries_{model_name}_ode.png"))
+    plt.savefig(os.path.join(output_dir, f"patch_timeseries_{model_name}_{solver}.png"))
     plt.close()

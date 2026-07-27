@@ -42,7 +42,8 @@ output/
 
 The generated project contains two patches, `A` and `B`. Patch `A` starts with one
 infectious individual; patch `B` starts fully susceptible. The network file
-contains within-patch and cross-patch weights.
+contains within-patch and cross-patch weights. The generated configuration uses
+`Solver: ode` and `TimeStep: 1.0`.
 
 Choose another built-in template with `--template`:
 
@@ -76,8 +77,8 @@ and network weights.
 patchsim run -c config.yaml
 ```
 
-The generated SIR project uses `TMax: 60`, so the CSV contains reporting times
-`0.0` through `59.0`. The first row is the seed state:
+The generated SIR project uses `TMax: 60` and `TimeStep: 1.0`, so the CSV
+contains reporting times `0.0` through `59.0`. The first row is the seed state:
 
 ```csv
 time,S_0,I_0,R_0,S_1,I_1,R_1

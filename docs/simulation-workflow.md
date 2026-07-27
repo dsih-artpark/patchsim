@@ -31,23 +31,27 @@ loaded.
 `patchsim run` creates reporting times with:
 
 ```python
-np.arange(TMax, dtype=float)
+np.arange(TMax, dtype=float) * TimeStep
 ```
 
-The high-level model constructs the coupled ODE and solves it with
-`scipy.integrate.odeint`. Internal LSODA steps are adaptive; output is sampled at
-the reporting times.
+Both built-in solvers use the same coupled derivative function. `Solver: ode`
+uses `scipy.integrate.odeint`; internal LSODA steps are adaptive and output is
+sampled at the reporting times. `Solver: discrete` takes one explicit-Euler step
+per reporting interval.
 
 ## 5. Write artifacts
 
-PatchSim writes:
+For `Solver: ode`, PatchSim writes:
 
 - `runs/all_patches_MODEL_ode.csv`;
 - `plots/patch_timeseries_MODEL_ode.png`; and
 - `logs/MODEL_run_TIMESTAMP.log`.
 
-The CSV and PNG are replaced by a rerun with the same `ModelName` and
-`OutputDir`. See [Results](results.md) for retention conventions.
+The discrete solver replaces `_ode` with `_discrete` in the CSV and PNG names.
+The log and JSON run summary record the selected solver and `TimeStep`.
+
+The CSV and PNG are replaced by a rerun with the same `ModelName`, `OutputDir`,
+and solver. See [Results](results.md) for retention conventions.
 
 ## Reproducible run checklist
 

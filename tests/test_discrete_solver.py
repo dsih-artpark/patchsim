@@ -1,8 +1,4 @@
-"""The discrete solver must honour the time grid it is given.
-
-It is currently unreachable from config; wiring it up as a selectable solver makes these
-guarantees load-bearing.
-"""
+"""Tests for explicit-Euler stepping and numerical safeguards."""
 
 import pytest
 
@@ -126,7 +122,7 @@ def test_negative_population_is_raised_not_returned():
     # gamma * dt > 1 makes explicit Euler overshoot below zero
     net = _decay_network(gamma=5.0)
 
-    with pytest.raises(ValueError, match="negative"):
+    with pytest.raises(ValueError, match="TimeStep"):
         net.simulate_discrete({"I_0": 100.0, "R_0": 0.0}, [0.0, 1.0, 2.0])
 
 
@@ -137,6 +133,40 @@ def test_floating_point_noise_near_zero_is_not_flagged():
     history = net.simulate_discrete({"I_0": 100.0, "R_0": 0.0}, [0.0, 1.0])
 
     assert history["I_0"][-1] == pytest.approx(0.0, abs=1e-9)
+
+
+def test_roundoff_allowance_scales_with_large_compartment():
+    net = _decay_network(gamma=1.0 + 1e-15)
+
+    history = net.simulate_discrete({"I_0": 1e12, "R_0": 0.0}, [0.0, 1.0])
+
+    assert history["I_0"][-1] == pytest.approx(0.0, abs=0.01)
+
+
+def test_large_compartment_still_rejects_material_overshoot():
+    net = _decay_network(gamma=1.0 + 1e-12)
+
+    with pytest.raises(ValueError, match="negative"):
+        net.simulate_discrete({"I_0": 1e12, "R_0": 0.0}, [0.0, 1.0])
+
+
+def test_roundoff_allowance_tracks_compartment_growth():
+    base = CompartmentalModel(
+        compartments=["I", "B", "C"],
+        parameters={"gamma": 1.0 + 1e-15},
+        transitions=[
+            {"transition": "I->B", "rate": "I"},
+            {"transition": "B->C", "rate": "gamma * B"},
+        ],
+    )
+    net = NetworkModel(base_model=base, num_patches=1, network_matrix=[[0.0]])
+
+    history = net.simulate_discrete(
+        {"I_0": 1e12, "B_0": 0.0, "C_0": 0.0},
+        [0.0, 1.0, 2.0],
+    )
+
+    assert history["B_0"][-1] == pytest.approx(0.0, abs=0.01)
 
 
 def test_total_population_is_conserved_exactly():
@@ -152,6 +182,21 @@ def test_total_population_is_conserved_exactly():
     # Clipping would fabricate ~1.1e-13 here, about 8x the float64 precision at this
     # magnitude (~1.4e-14), so the bound below distinguishes the two behaviours.
     assert history["I_0"][-1] + history["R_0"][-1] == pytest.approx(100.0, abs=5e-14)
+
+
+def test_large_other_compartment_does_not_hide_material_negative_value():
+    base = CompartmentalModel(
+        compartments=["I", "R", "X"],
+        parameters={"gamma": 1.0 + 1e-8},
+        transitions=[{"transition": "I->R", "rate": "gamma * I"}],
+    )
+    net = NetworkModel(base_model=base, num_patches=1, network_matrix=[[0.0]])
+
+    with pytest.raises(ValueError, match="negative"):
+        net.simulate_discrete(
+            {"I_0": 1.0, "R_0": 0.0, "X_0": 1e18},
+            [0.0, 1.0],
+        )
 
 
 def test_slightly_irregular_grid_is_integrated_not_rejected():

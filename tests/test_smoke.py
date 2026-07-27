@@ -1,6 +1,8 @@
 import json
 import subprocess
 
+import yaml
+
 
 def test_patchsim_import():
     import patchsim
@@ -89,6 +91,9 @@ def test_cli_init_template_scaffold(tmp_path):
     config_text = (project_dir / "config.yaml").read_text(encoding="utf-8")
     assert "E" in config_text
     assert "S -> E" in config_text
+    config = yaml.safe_load(config_text)
+    assert config["Solver"] == "ode"
+    assert config["TimeStep"] == 1.0
 
 
 def test_cli_init_scaffold(tmp_path):

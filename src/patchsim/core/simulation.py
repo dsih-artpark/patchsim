@@ -5,6 +5,7 @@ ODE and discrete simulation logic is implemented in core/model.py.
 
 import os
 import re
+from numbers import Real
 from pathlib import Path
 from typing import Any
 
@@ -13,10 +14,13 @@ import pandas as pd
 import yaml
 
 from patchsim.core.model import CompartmentalModel, NetworkModel
-from patchsim.core.model_runner import Model
 from patchsim.utils.logger import setup_logger
+from patchsim.utils.viz import plot_patch_subplots
 
 EPSILON = 1e-6
+DEFAULT_SOLVER = "ode"
+DEFAULT_TIME_STEP = 1.0
+SOLVERS = ("ode", "discrete")
 
 
 MODEL_TEMPLATE_CONFIGS: dict[str, dict[str, Any]] = {
@@ -58,6 +62,12 @@ def get_config_schema() -> dict[str, Any]:
             "OutputDir": {"type": "string"},
             "ModelName": {"type": "string"},
             "TMax": {"type": "integer", "minimum": 1},
+            "Solver": {"type": "string", "enum": list(SOLVERS), "default": DEFAULT_SOLVER},
+            "TimeStep": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "default": DEFAULT_TIME_STEP,
+            },
             "Tolerance": {"type": ["number", "string"]},
             "MaxIter": {"type": "integer", "minimum": 1},
             "StartDate": {"type": ["string", "null"]},
@@ -125,6 +135,8 @@ def get_init_template_config(template_name: str, project_name: str) -> dict[str,
         "Logging": False,
         "ModelName": project_name,
         "TMax": 60,
+        "Solver": DEFAULT_SOLVER,
+        "TimeStep": DEFAULT_TIME_STEP,
         "Tolerance": 1e-8,
         "MaxIter": 10000,
         "StartDate": "2020-01-01",
@@ -159,6 +171,10 @@ def load_config(config_path: str) -> dict[str, Any]:
                 f"Please add '{field}' to your config file."
             )
 
+    solver, _t_max, time_step = get_run_settings(config)
+    config["Solver"] = solver
+    config["TimeStep"] = time_step
+
     # Resolve relative paths against the config file directory.
     cfg_dir = cfg_path.parent
     for key in ["PatchFile", "SeedFile", "NetworkFile", "OutputDir"]:
@@ -169,6 +185,25 @@ def load_config(config_path: str) -> dict[str, Any]:
                 config[key] = str((cfg_dir / p).resolve())
 
     return config
+
+
+def get_run_settings(config: dict[str, Any]) -> tuple[str, int, float]:
+    """Validate and return the solver, reporting-point count, and grid interval."""
+    solver = config.get("Solver", DEFAULT_SOLVER)
+    if not isinstance(solver, str) or solver not in SOLVERS:
+        raise ValueError(f"'Solver' must be one of {list(SOLVERS)}; received {solver!r}")
+
+    t_max = config.get("TMax")
+    if isinstance(t_max, bool) or not isinstance(t_max, int) or t_max <= 0:
+        raise ValueError(f"'TMax' must be a positive integer count of reporting points; received {t_max!r}")
+
+    time_step = config.get("TimeStep", DEFAULT_TIME_STEP)
+    if isinstance(time_step, bool) or not isinstance(time_step, Real):
+        raise ValueError(f"'TimeStep' must be a finite positive number; received {time_step!r}")
+    time_step = float(time_step)
+    if not np.isfinite(time_step) or time_step <= 0:
+        raise ValueError(f"'TimeStep' must be a finite positive number; received {time_step!r}")
+    return solver, t_max, time_step
 
 
 def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, float], list, int]:
@@ -372,6 +407,10 @@ def run_simulation(
     Returns:
         A summary dictionary describing the generated artifacts.
     """
+    solver, t_max, time_step = get_run_settings(config)
+    config["Solver"] = solver
+    config["TimeStep"] = time_step
+
     # Create output directories
     for subdir in ["plots", "runs"]:
         dir_path = os.path.join(config["OutputDir"], subdir)
@@ -383,33 +422,35 @@ def run_simulation(
     # Set up logger
     logger = setup_logger(model_name, config, num_patches, patches, net.base_model)
 
-    # Validate and construct time range
-    t_max = config.get("TMax")
-    if not isinstance(t_max, int) or t_max <= 0:
-        raise ValueError(
-            f"Invalid 'TMax' value: {t_max}\n"
-            "'TMax' must be a positive integer (number of time steps).\n"
-            "Example: TMax: 100"
-        )
-    t_range = np.arange(t_max, dtype=float)
+    t_range = np.arange(t_max, dtype=float) * time_step
 
     # Run simulation
-    model = Model(net, compartments=list(net.base_model.compartments))
-    out_ode = model.solve(y0, t_range)
+    if solver == "ode":
+        _times, results = net.simulate_ode(y0, t_range)
+    else:
+        results = net.simulate_discrete(y0, t_range)
 
     # Save results
-    out_df = pd.DataFrame(out_ode)
+    out_df = pd.DataFrame(results)
     out_df["time"] = t_range
     cols = ["time"] + [c for c in out_df.columns if c != "time"]
     out_df = out_df[cols]
 
-    csv_path = os.path.join(runs_dir, f"all_patches_{model_name}_ode.csv")
+    csv_path = os.path.join(runs_dir, f"all_patches_{model_name}_{solver}.csv")
     out_df.to_csv(csv_path, index=False)
     logger.info(f"Saved simulation output to {csv_path}")
 
-    model.visualize(t_range, out_ode, patches, plots_dir, model_name)
+    plot_patch_subplots(
+        t_range,
+        results,
+        patches,
+        plots_dir,
+        model_name,
+        compartments=list(net.base_model.compartments),
+        solver=solver,
+    )
 
-    plot_path = os.path.join(plots_dir, f"patch_timeseries_{model_name}_ode.png")
+    plot_path = os.path.join(plots_dir, f"patch_timeseries_{model_name}_{solver}.png")
     logger.info(f"Saved all patch subplots to {plot_path}")
 
     return {
@@ -420,4 +461,6 @@ def run_simulation(
         "num_patches": num_patches,
         "patches": patches,
         "t_max": t_max,
+        "solver": solver,
+        "time_step": time_step,
     }

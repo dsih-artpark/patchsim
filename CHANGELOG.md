@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- YAML configuration can select the existing `ode` or deterministic
+  explicit-Euler (`discrete`) solver. `TimeStep` defines the shared reporting
+  interval and defaults to `1.0`.
+
 ### Security
 - Transition rate expressions are now parsed and evaluated against an arithmetic-only
   allowlist instead of `eval`. Expressions come from user-supplied YAML, and configs are
@@ -15,8 +20,12 @@ All notable changes to this project will be documented in this file.
   rejected instead of returning `inf` or a complex number into the simulation.
 - Rate expressions accept numpy scalars of any dtype; previously only `float64` worked,
   because it is the one numpy type that subclasses Python's `float`.
+- Patch-specific parameter overrides now affect CLI ODE runs instead of being parsed
+  and ignored.
 
 ### Changed
+- Run CSV/PNG names, JSON summaries, and logs identify the selected solver. Existing
+  configurations still default to ODE and retain `_ode` artifact names.
 - **Breaking:** `NetworkModel.simulate_discrete()` now takes one Euler step per interval
   in `t_range`, using that interval's own width, and raises on divergence rather than
   returning negative populations. It previously assumed unit spacing regardless of the
