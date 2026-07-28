@@ -2,6 +2,7 @@
 Core model implementation for compartmental models.
 """
 
+import logging
 import re
 from typing import Any, Callable, Dict
 
@@ -141,6 +142,7 @@ class NetworkModel:
             interaction_matrix if interaction_matrix is not None else [[1.0]],
             dtype=float,
         )
+        self._patch_names_warning_emitted = False
         if self.interaction.shape != (self.num_groups, self.num_groups):
             raise ValueError(
                 f"Interaction matrix must have shape {(self.num_groups, self.num_groups)}; "
@@ -179,18 +181,16 @@ class NetworkModel:
         Returns:
             Per-capita forces by patch, or by patch and group for grouped models.
         """
-        forces = np.zeros((self.num_patches, self.num_groups), dtype=float)
-        for i in range(self.num_patches):
-            for group_i in range(self.num_groups):
-                for j in range(self.num_patches):
-                    spatial_weight = 1.0 if self.num_patches == 1 else self.network[i][j]
-                    for group_j in range(self.num_groups):
-                        interaction_weight = self.interaction[group_i][group_j]
-                        contributor_state = self.get_patch_state(full_state, j, group_j)
-                        infected = contributor_state[infected_compartment]
-                        population = self.get_patch_population(contributor_state)
-                        prevalence = infected / population if population > 0 else 0.0
-                        forces[i, group_i] += spatial_weight * interaction_weight * prevalence
+        prevalence = np.zeros((self.num_patches, self.num_groups), dtype=float)
+        for patch_idx in range(self.num_patches):
+            for group_idx in range(self.num_groups):
+                contributor_state = self.get_patch_state(full_state, patch_idx, group_idx)
+                population = self.get_patch_population(contributor_state)
+                if population > 0:
+                    prevalence[patch_idx, group_idx] = contributor_state[infected_compartment] / population
+
+        spatial = np.ones((1, 1), dtype=float) if self.num_patches == 1 else np.asarray(self.network, dtype=float)
+        forces = spatial @ prevalence @ self.interaction.T
         if self.groups:
             return forces.tolist()
         return forces[:, 0].tolist()
@@ -240,6 +240,8 @@ class NetworkModel:
 
         # Compute network-mediated force of infection for each patch
         lambdas = self.compute_force_of_infection(state)
+        infection_compartments = set(getattr(self, "infection_compartments", {"I", "E"}))
+        has_mixing = self.num_patches > 1 or bool(self.groups)
 
         # Process each patch and optional group.
         for i in range(self.num_patches):
@@ -251,11 +253,9 @@ class NetworkModel:
                     patch_name = None
                     if hasattr(self, "patch_names") and i < len(self.patch_names):
                         patch_name = self.patch_names[i]
-                    elif self.patch_parameters:
-                        import logging
-
-                        logger = logging.getLogger(__name__)
-                        logger.warning(
+                    elif self.patch_parameters and not self._patch_names_warning_emitted:
+                        self._patch_names_warning_emitted = True
+                        logging.getLogger(__name__).warning(
                             "patch_parameters defined but patch_names not set; "
                             "patch-specific parameters will be ignored for patch %d",
                             i,
@@ -273,9 +273,7 @@ class NetworkModel:
                     rate = rates[transition_label]
                     original_rate_expr = transition.get("rate", "")
 
-                    infection_compartments = set(getattr(self, "infection_compartments", {"I", "E"}))
                     is_infection_transition = source == "S" and target in infection_compartments
-                    has_mixing = self.num_patches > 1 or bool(self.groups)
                     adjusted_rate = self._adjust_infection_rate(
                         patch_params,
                         original_rate_expr,

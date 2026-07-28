@@ -27,7 +27,14 @@ def plot_patch_subplots(
     axes = axes.flatten() if n > 1 else [axes]
     for i, patch in enumerate(patches):
         ax = axes[i]
-        comps = compartments or [k[: -len(f"_{i}")] for k in out_ode if k.endswith(f"_{i}")]
+        if compartments is not None:
+            comps = compartments
+        elif groups:
+            suffix = f"_{i}_0"
+            comps = [key[: -len(suffix)] for key in out_ode if key.endswith(suffix)]
+        else:
+            suffix = f"_{i}"
+            comps = [key[: -len(suffix)] for key in out_ode if key.endswith(suffix)]
         if groups:
             for group_idx, group in enumerate(groups):
                 for compartment in comps:

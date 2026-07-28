@@ -10,6 +10,7 @@ import yaml
 
 from patchsim.core.model import CompartmentalModel, NetworkModel
 from patchsim.core.simulation import load_config, setup_simulation
+from patchsim.utils.viz import plot_patch_subplots
 
 
 def _write_grouped_project(tmp_path: Path) -> Path:
@@ -130,6 +131,47 @@ def test_force_of_infection_uses_focal_rows_and_zero_population_contributes_zero
     assert derivatives["S_0_0"] == pytest.approx(-36.0)
     assert derivatives["S_0_1"] == pytest.approx(-88.0)
     assert all(np.isfinite(value) for value in derivatives.values())
+
+
+def test_missing_patch_names_warning_is_emitted_once(caplog):
+    base = CompartmentalModel(
+        ["S", "I"],
+        {"beta": 0.1},
+        [{"transition": "S->I", "rate": "beta"}],
+    )
+    model = NetworkModel(base, num_patches=2, network_matrix=[[1.0, 0.0], [0.0, 1.0]])
+    model.patch_parameters = {"A": {"beta": 0.2}}
+    state = {"S_0": 99.0, "I_0": 1.0, "S_1": 100.0, "I_1": 0.0}
+
+    model.compute_derivatives(state)
+    model.compute_derivatives(state)
+
+    assert (
+        caplog.messages.count(
+            "patch_parameters defined but patch_names not set; patch-specific parameters will be ignored for patch 0"
+        )
+        == 1
+    )
+
+
+def test_grouped_plot_infers_compartments(tmp_path):
+    output = {
+        f"{compartment}_{patch_idx}_{group_idx}": [value, value]
+        for patch_idx in range(2)
+        for group_idx in range(2)
+        for compartment, value in (("S", 90.0), ("I", 10.0))
+    }
+
+    plot_patch_subplots(
+        [0, 1],
+        output,
+        ["A", "B"],
+        tmp_path,
+        "groups",
+        groups=["low", "high"],
+    )
+
+    assert (tmp_path / "patch_timeseries_groups_ode.png").is_file()
 
 
 @pytest.mark.parametrize(

@@ -279,14 +279,16 @@ def _load_groups(
         raise ValueError(f"GroupFile ({path}) has no groups for first patch '{patches[0]}'.")
     groups = list(first_patch_groups)
     expected_groups = set(groups)
+    rows_by_patch = {patch: rows for patch, rows in frame.groupby("patch", sort=False)}
     for patch in patches:
-        actual = set(frame.loc[frame["patch"] == patch, "group"])
+        patch_rows = rows_by_patch[patch]
+        actual = set(patch_rows["group"])
         if actual != expected_groups:
             raise ValueError(
                 f"GroupFile ({path}) groups for patch '{patch}' do not match the first patch "
                 f"(missing={sorted(expected_groups - actual)}, extra={sorted(actual - expected_groups)})."
             )
-        total = float(frame.loc[frame["patch"] == patch, "population"].sum())
+        total = float(patch_rows["population"].sum())
         if abs(total - populations[patch]) >= EPSILON:
             raise ValueError(
                 f"Group populations for patch '{patch}' sum to {total}, not PatchFile population {populations[patch]}."
