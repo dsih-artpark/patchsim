@@ -7,6 +7,9 @@
 
 **PatchSim** is a modular metapopulation simulation framework for multi-disease epidemiological modelling.
 
+[Documentation](https://patchsim.readthedocs.io/) |
+[GitHub repository](https://github.com/dsih-artpark/patchsim)
+
 ---
 
 ## Vision
@@ -48,11 +51,12 @@ PatchSim aims to support a range of modelling features commonly used in metapopu
   - SIR, SEIR, SIRS and extensions
   - Supports both discrete timestep and ODE-based solvers
 - 🛠️ **Scenario and Parameter Management**:
-  - Batch simulations for scenario comparison
-  - Sensitivity analysis and parameter sweeps
+  - First-order and total-order Sobol sensitivity analysis for bounded global
+    parameters
+  - Compact samples, responses, indices, and provenance artifacts
 - 🧵 **Reproducibility**:
-  - Random seed control and metadata logging
-  - Version-tracked configurations
+  - Seeded sensitivity sampling and confidence intervals
+  - Input hashes and method versions in sensitivity manifests
 - 📦 **Modularity**:
   - Built-in ODE and discrete solvers consume the same validated spatial network
     format
@@ -65,6 +69,12 @@ Install from PyPI:
 
 ```bash
 pip install patchsim
+```
+
+Sensitivity analysis uses an optional dependency:
+
+```bash
+pip install "patchsim[analysis]"
 ```
 
 Install from source using [uv](https://github.com/astral-sh/uv):
@@ -119,6 +129,9 @@ uv run patchsim run -c my-project/config.yaml
 # Run and emit machine-readable JSON output
 uv run patchsim run -c my-project/config.yaml --json
 
+# Run or reuse a configured Sobol sensitivity study
+uv run patchsim sensitivity -c my-project/config.yaml
+
 # List built-in model references and YAML templates
 uv run patchsim list-models
 
@@ -132,44 +145,19 @@ uv run patchsim list-models --json
 import patchsim
 
 config = patchsim.load_config("config.yaml")
-net, y0, patches, n = patchsim.setup_simulation(config)
-patchsim.run_simulation(config, "my-model", net, y0, patches, n)
+frame = patchsim.simulate(config, parameter_overrides={"beta": 0.08})
 ```
 
-The simulation outputs are saved in the following structure:
-```
-output/
-├── logs/
-│   └── cli_YYYYMMDD_HHMMSS.log  # Timestamped log files
-└── sample-sir-ode/              # Model-specific output directory
-    ├── plots/
-    │   └── patch_timeseries_sample-sir-ode_ode.png
-    └── runs/
-        └── all_patches_sample-sir-ode_ode.csv
-```
+`simulate` returns the configured time series without writing files or mutating
+the loaded config. It is the integration point for external fitting code.
 
 ### Configuration
 
-Simulations are configured using YAML files. The configuration file specifies:
-- Model parameters (e.g., transmission rates)
-- Input files (patch populations, seed data, network)
-- Simulation settings (time horizon, output directory)
-
-Example configuration:
-```yaml
-# Model parameters
-Beta: 0.3
-Gamma: 0.1
-
-# Input files
-PatchFile: data/patch/sample-sir-ode-patch-population.csv
-SeedFile: data/seeds/sample-sir-ode-patchA-2.csv
-NetworkFile: data/networks/sample-network-static.csv
-
-# Simulation settings
-OutputDir: output/sample-sir-ode
-TMax: 50
-```
+YAML configuration defines model parameters, transition expressions, input
+files, solver settings, and output location. See the
+[configuration reference](https://patchsim.readthedocs.io/en/latest/configuration.html)
+and the
+[worked simulation and sensitivity workflow](https://patchsim.readthedocs.io/en/latest/simulation-workflow.html).
 
 ---
 

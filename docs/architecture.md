@@ -12,21 +12,32 @@ CLI
   -> setup_simulation
   -> NetworkModel + initial state
   -> NetworkModel.simulate_ode | NetworkModel.simulate_discrete
-  -> CSV + PNG + log
+  -> run: CSV + PNG + log
+  -> sensitivity: samples + responses + indices + manifest
 ```
 
 ## Components
 
 ### `patchsim.cli`
 
-Defines `init`, `validate`, `run`, and `list-models`. It owns argument parsing,
-human or JSON command output, and process exit behavior.
+Defines `init`, `validate`, `run`, `sensitivity`, `list-models`, and contact
+generation. It owns argument parsing, human or JSON command output, and process
+exit behavior.
 
 ### `patchsim.core.simulation`
 
 Owns the configuration schema and built-in template data. It resolves
 config-relative paths, validates CSV inputs, constructs the dense network matrix,
 creates the compartment/network model, and writes run artifacts.
+
+The public `patchsim.simulate` evaluator uses the same prepared solver path and
+returns a time-series frame without writing files.
+
+### `patchsim.sensitivity`
+
+Validates the bounded Sobol contract, samples through optional SALib, reduces
+model trajectories to scalar metrics, and atomically publishes study artifacts.
+An existing study is reused only after request and artifact hashes match.
 
 ### `patchsim.core.model`
 
@@ -58,8 +69,8 @@ and discrete paths share the same derivative function.
 - `NetworkFile` owns the day-zero dense matrix entries.
 - `OutputDir` owns user-facing run artifacts.
 
-There is no hidden project state directory and no persistent cache in the current
-implementation.
+There is no hidden project state directory. Sensitivity reuse is limited to the
+explicit named study directory under `OutputDir`.
 
 ## Current extension boundary
 

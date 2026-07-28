@@ -22,7 +22,7 @@ jobs:
           python-version-file: .python-version
 
       - name: Sync dependencies (including dev)
-        run: uv sync --extra dev --extra geo --frozen
+        run: uv sync --extra analysis --extra dev --extra geo --frozen
 
       - name: Ruff lint
         run: uv run --no-sync --frozen ruff check .
