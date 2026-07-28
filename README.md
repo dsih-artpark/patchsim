@@ -41,10 +41,9 @@ Compared to many epidemiology tools that are either code-heavy or tightly bound 
 PatchSim aims to support a range of modelling features commonly used in metapopulation disease simulations:
 
 - 🗺️ **Spatial Networks**: Represent geographical units (e.g., subdistricts, regions) as interconnected patches with movement/contact matrices.
-- 👥 **Stratification by Population Attributes**:
-  - **Age groups**
-  - **Species (e.g., cattle, buffalo)**
-  - **Risk groups or occupations**
+- 👥 **Stratification by Population Attributes**: Use a generic group axis for age,
+  species, behavioural risk, occupation, or another categorical partition, with an
+  explicitly supplied interaction matrix.
 - 🧪 **Disease Agnostic Compartment Models**:
   - SIR, SEIR, SIRS and extensions
   - Supports both discrete timestep and ODE-based solvers

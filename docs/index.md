@@ -14,6 +14,7 @@ version, and validate every configuration before running it.
 - [Configuration](configuration.md): field names, file contracts, and expressions.
 - [CLI reference](cli-reference.md): commands, output streams, and exit behavior.
 - [Mathematical model](mathematical-model.md): transition and network equations.
+- [Group stratification](group-stratification.md): custom groups and interaction matrices.
 - [Contact generation](contact-generation.md): spatial kernels, units, and validation.
 - [Results](results.md): output paths, column naming, and rerun behavior.
 
@@ -39,6 +40,7 @@ cli-reference.md
 mathematical-model.md
 rate-multiplication.md
 network-design.md
+group-stratification.md
 contact-generation.md
 simulation-workflow.md
 results.md

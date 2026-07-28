@@ -2,6 +2,7 @@
 Core model implementation for compartmental models.
 """
 
+import logging
 import re
 from typing import Any, Callable, Dict
 
@@ -119,22 +120,58 @@ class CompartmentalModel:
 class NetworkModel:
     """Network model for multi-patch simulations."""
 
-    def __init__(self, base_model: CompartmentalModel, num_patches: int, network_matrix: list[list[float]]):
+    def __init__(
+        self,
+        base_model: CompartmentalModel,
+        num_patches: int,
+        network_matrix: list[list[float]],
+        groups: list[str] | None = None,
+        interaction_matrix: list[list[float]] | None = None,
+    ):
         """Initialize the network model."""
         self.base_model = base_model
         self.num_patches = num_patches
         self.network = network_matrix
-        self.all_compartments = [f"{c}_{i}" for i in range(num_patches) for c in base_model.compartments]
+        self.groups = list(groups or [])
+        self.num_groups = len(self.groups) if self.groups else 1
+        if len(set(self.groups)) != len(self.groups):
+            raise ValueError("Group labels must be unique.")
+        if interaction_matrix is not None and not self.groups:
+            raise ValueError("An interaction matrix requires group labels.")
+        self.interaction = np.asarray(
+            interaction_matrix if interaction_matrix is not None else [[1.0]],
+            dtype=float,
+        )
+        self._patch_names_warning_emitted = False
+        if self.interaction.shape != (self.num_groups, self.num_groups):
+            raise ValueError(
+                f"Interaction matrix must have shape {(self.num_groups, self.num_groups)}; "
+                f"received {self.interaction.shape}."
+            )
+        self.all_compartments = [
+            self.state_key(c, patch_idx, group_idx)
+            for patch_idx in range(num_patches)
+            for group_idx in range(self.num_groups)
+            for c in base_model.compartments
+        ]
 
-    def get_patch_state(self, full_state: Dict[str, float], patch_idx: int) -> Dict[str, float]:
-        """Get state for a specific patch."""
-        return {c: full_state[f"{c}_{patch_idx}"] for c in self.base_model.compartments}
+    def state_key(self, compartment: str, patch_idx: int, group_idx: int = 0) -> str:
+        """Return the internal state key for one compartment stratum."""
+        if self.groups:
+            return f"{compartment}_{patch_idx}_{group_idx}"
+        return f"{compartment}_{patch_idx}"
+
+    def get_patch_state(self, full_state: Dict[str, float], patch_idx: int, group_idx: int = 0) -> Dict[str, float]:
+        """Get compartment state for a patch and optional group."""
+        return {c: full_state[self.state_key(c, patch_idx, group_idx)] for c in self.base_model.compartments}
 
     def get_patch_population(self, state: Dict[str, float]) -> float:
         """Get total population for a patch."""
         return sum(state[c] for c in self.base_model.compartments)
 
-    def compute_force_of_infection(self, full_state: dict[str, float], infected_compartment: str = "I") -> list[float]:
+    def compute_force_of_infection(
+        self, full_state: dict[str, float], infected_compartment: str = "I"
+    ) -> list[float] | list[list[float]]:
         """Compute force of infection for each patch (per-capita rate, before beta scaling).
 
         Args:
@@ -142,26 +179,21 @@ class NetworkModel:
             infected_compartment: Name of the compartment representing infected individuals
 
         Returns:
-            List of per-capita forces of infection (model_runner applies beta * FOI * S)
+            Per-capita forces by patch, or by patch and group for grouped models.
         """
-        lambdas = []
-        for i in range(self.num_patches):
-            if self.num_patches == 1:
-                # Single patch case: infected proportion
-                patch_state = self.get_patch_state(full_state, 0)
-                infected = patch_state[infected_compartment]
-                total_pop = self.get_patch_population(patch_state)
-                force = infected / total_pop if total_pop > 0 else 0
-            else:
-                # Multi-patch case: network-weighted infected proportion
-                force = 0
-                for j in range(self.num_patches):
-                    patch_state_j = self.get_patch_state(full_state, j)
-                    infected_j = patch_state_j[infected_compartment]
-                    pop_j = self.get_patch_population(patch_state_j)
-                    force += self.network[i][j] * (infected_j / pop_j if pop_j > 0 else 0)
-            lambdas.append(force)
-        return lambdas
+        prevalence = np.zeros((self.num_patches, self.num_groups), dtype=float)
+        for patch_idx in range(self.num_patches):
+            for group_idx in range(self.num_groups):
+                contributor_state = self.get_patch_state(full_state, patch_idx, group_idx)
+                population = self.get_patch_population(contributor_state)
+                if population > 0:
+                    prevalence[patch_idx, group_idx] = contributor_state[infected_compartment] / population
+
+        spatial = np.ones((1, 1), dtype=float) if self.num_patches == 1 else np.asarray(self.network, dtype=float)
+        forces = spatial @ prevalence @ self.interaction.T
+        if self.groups:
+            return forces.tolist()
+        return forces[:, 0].tolist()
 
     def _adjust_infection_rate(
         self,
@@ -169,10 +201,9 @@ class NetworkModel:
         original_rate_expr: Any,
         rate: float,
         patch_state: dict[str, float],
-        lambdas: list[float],
-        patch_idx: int,
+        force_of_infection: float,
         is_infection_transition: bool,
-        has_network: bool,
+        has_mixing: bool,
     ) -> float:
         """Adjust infection rate for network-mediated FOI.
 
@@ -181,24 +212,23 @@ class NetworkModel:
             original_rate_expr: Original rate expression from transition definition
             rate: Computed rate from base model
             patch_state: Current state for the patch
-            lambdas: Force of infection for each patch
-            patch_idx: Current patch index
+            force_of_infection: Force of infection for the current stratum
             is_infection_transition: Whether this is an infection transition
-            has_network: Whether multi-patch network exists
+            has_mixing: Whether spatial or group mixing is active
 
         Returns:
             Adjusted rate incorporating network FOI if applicable
         """
-        if is_infection_transition and has_network:
+        if is_infection_transition and has_mixing:
             # Network case: Apply network FOI (lambdas already computed)
             # Check if original expression includes beta term
             beta = patch_params.get("beta", 1.0)
             if isinstance(original_rate_expr, str) and re.search(r"\bbeta\b", original_rate_expr):
                 # Rate expression includes beta; apply network FOI correction
-                adjusted_rate = beta * patch_state["S"] * lambdas[patch_idx]
+                adjusted_rate = beta * patch_state["S"] * force_of_infection
             else:
                 # Rate is already computed; apply FOI scaling
-                adjusted_rate = rate * lambdas[patch_idx] if patch_state["S"] > 0 else 0
+                adjusted_rate = rate * force_of_infection if patch_state["S"] > 0 else 0
         else:
             # Single patch or non-infection transition: use rate as-is
             adjusted_rate = rate
@@ -210,63 +240,52 @@ class NetworkModel:
 
         # Compute network-mediated force of infection for each patch
         lambdas = self.compute_force_of_infection(state)
+        infection_compartments = set(getattr(self, "infection_compartments", {"I", "E"}))
+        has_mixing = self.num_patches > 1 or bool(self.groups)
 
-        # Process each patch
+        # Process each patch and optional group.
         for i in range(self.num_patches):
-            # Get state for this patch
-            patch_state = self.get_patch_state(state, i)
+            for group_idx in range(self.num_groups):
+                patch_state = self.get_patch_state(state, i, group_idx)
 
-            # Resolve patch parameters using canonical patch ordering when available.
-            if hasattr(self, "patch_parameters"):
-                patch_name = None
-                if hasattr(self, "patch_names") and i < len(self.patch_names):
-                    patch_name = self.patch_names[i]
-                elif self.patch_parameters:
-                    import logging
+                # Resolve patch parameters using canonical patch ordering when available.
+                if hasattr(self, "patch_parameters"):
+                    patch_name = None
+                    if hasattr(self, "patch_names") and i < len(self.patch_names):
+                        patch_name = self.patch_names[i]
+                    elif self.patch_parameters and not self._patch_names_warning_emitted:
+                        self._patch_names_warning_emitted = True
+                        logging.getLogger(__name__).warning(
+                            "patch_parameters defined but patch_names not set; "
+                            "patch-specific parameters will be ignored for patch %d",
+                            i,
+                        )
+                    patch_params = {**self.base_model.parameters, **self.patch_parameters.get(patch_name, {})}
+                else:
+                    patch_params = self.base_model.parameters
 
-                    logger = logging.getLogger(__name__)
-                    logger.warning(
-                        "patch_parameters defined but patch_names not set; "
-                        "patch-specific parameters will be ignored for patch %d",
-                        i,
+                rates = self.base_model.compute_rates(patch_state, parameters=patch_params)
+                force = lambdas[i][group_idx] if self.groups else lambdas[i]
+
+                for transition in self.base_model.transitions:
+                    transition_label = transition["transition"]
+                    source, target = [p.strip() for p in transition_label.split("->")]
+                    rate = rates[transition_label]
+                    original_rate_expr = transition.get("rate", "")
+
+                    is_infection_transition = source == "S" and target in infection_compartments
+                    adjusted_rate = self._adjust_infection_rate(
+                        patch_params,
+                        original_rate_expr,
+                        rate,
+                        patch_state,
+                        force,
+                        is_infection_transition,
+                        has_mixing,
                     )
-                patch_params = {**self.base_model.parameters, **self.patch_parameters.get(patch_name, {})}
-            else:
-                patch_params = self.base_model.parameters
 
-            # Compute rates with patch-specific parameters without mutating shared state
-            rates = self.base_model.compute_rates(patch_state, parameters=patch_params)
-
-            # Update derivatives based on rates, applying network-mediated FOI to infection transitions
-            for transition in self.base_model.transitions:
-                transition_label = transition["transition"]
-                source, target = [p.strip() for p in transition_label.split("->")]
-                rate = rates[transition_label]
-                original_rate_expr = transition.get("rate", "")
-
-                # Apply network-mediated FOI to susceptible-to-infection transitions.
-                # Allow model-level override via `infection_compartments` attribute.
-                infection_compartments = set(getattr(self, "infection_compartments", {"I", "E"}))
-                is_infection_transition = source == "S" and target in infection_compartments
-
-                has_network = self.num_patches > 1 and self.network is not None
-
-                # Use shared helper to adjust infection rate for network FOI
-                adjusted_rate = self._adjust_infection_rate(
-                    patch_params,
-                    original_rate_expr,
-                    rate,
-                    patch_state,
-                    lambdas,
-                    i,
-                    is_infection_transition,
-                    has_network,
-                )
-
-                # Decrease source compartment
-                derivatives[f"{source}_{i}"] -= adjusted_rate
-                # Increase target compartment
-                derivatives[f"{target}_{i}"] += adjusted_rate
+                    derivatives[self.state_key(source, i, group_idx)] -= adjusted_rate
+                    derivatives[self.state_key(target, i, group_idx)] += adjusted_rate
 
         return derivatives
 
