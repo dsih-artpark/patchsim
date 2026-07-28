@@ -71,6 +71,7 @@ Validation checks:
 - patch and population columns;
 - positive patch populations;
 - seed compartments, values, patch identifiers, and population totals;
+- optional group populations, seed coverage, interaction labels, weights, and units;
 - transition arrow syntax, compartment names, and expression identifiers;
 - patch-parameter identifiers; and
 - day-zero network patch identifiers and non-negative weights.
@@ -82,6 +83,8 @@ Configuration is valid: config.yaml
 ```
 
 JSON output includes `ok`, `config`, `model_name`, `num_patches`, and `patches`.
+Grouped validation additionally includes `num_groups`, ordered `groups`, and
+interaction diagnostics suitable for saving with a study.
 `--schema` prints the JSON Schema used for editor and tooling integration.
 
 ## `run`

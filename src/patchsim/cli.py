@@ -61,11 +61,18 @@ def _cmd_validate(config_path: str, *, json_output: bool = False, schema: bool =
         return get_config_schema()
 
     config = load_config(config_path)
-    _net, _y0, patches, num_patches = setup_simulation(config)
+    net, _y0, patches, num_patches = setup_simulation(config)
     if not json_output:
         print(f"Configuration is valid: {config_path}")
+        if net.groups:
+            diagnostics = net.interaction_diagnostics
+            print(
+                "Interaction diagnostics: "
+                f"units={diagnostics['units']}, "
+                f"max reciprocity residual={diagnostics['max_local_reciprocity_residual']:.6g}"
+            )
     if json_output:
-        return {
+        result = {
             "ok": True,
             "config": config_path,
             "model_name": config.get("ModelName"),
@@ -74,6 +81,15 @@ def _cmd_validate(config_path: str, *, json_output: bool = False, schema: bool =
             "solver": config["Solver"],
             "time_step": config["TimeStep"],
         }
+        if net.groups:
+            result.update(
+                {
+                    "num_groups": net.num_groups,
+                    "groups": net.groups,
+                    "interaction": net.interaction_diagnostics,
+                }
+            )
+        return result
     return None
 
 

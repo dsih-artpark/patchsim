@@ -107,6 +107,27 @@ $$
 Weights are not probabilities unless the input author makes them so. PatchSim
 does not normalize $W$.
 
+## Grouped infectious pressure
+
+An optional categorical group axis divides each patch population into modeller-defined
+strata. Let $M_{ab}$ be the supplied interaction weight from focal group $a$ to
+infectious contributor group $b$. The grouped runtime computes:
+
+$$
+\lambda_{i,a}(t)
+=
+\sum_{j=1}^{n}\sum_{b=1}^{g}
+W_{ij}M_{ab}\frac{I_{j,b}(t)}{N_{j,b}(t)}.
+$$
+
+For a single patch, $W_{11}=1$ for this calculation. A contributor stratum with zero
+population contributes zero. The infection flow is $\beta S_{i,a}\lambda_{i,a}$ under
+the built-in network infection rule.
+
+This is a separable spatial/group mixing assumption. `InteractionUnits` records the
+meaning of $M$; PatchSim does not normalize it or infer compatible units for $\beta$.
+See [Group stratification](group-stratification.md) for input and validation contracts.
+
 ## Other built-in templates
 
 The CLI can scaffold these transition structures:

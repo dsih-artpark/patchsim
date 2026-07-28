@@ -27,12 +27,18 @@ a network. Run `patchsim validate -c CONFIG` before `patchsim run`.
 | `TimeStep` | No | Positive reporting-grid interval; defaults to `1.0` |
 | `ModelName` | For `run` | Identifier used in output filenames |
 | `NetworkFile` | No | Day-zero network CSV; `null` creates a zero matrix |
+| `GroupFile` | Grouped runs | Patch-by-group populations |
+| `InteractionFile` | Grouped runs | Shared focal-by-contributor group matrix |
+| `InteractionUnits` | Grouped runs | Non-empty description of interaction-weight units |
 | `compartments` | No | Ordered compartment names; inferred from `SeedFile` if absent |
 | `Parameters` | No | Global names available to transition expressions |
 | `PatchParameters` | No | Per-patch parameter overrides |
 
 `Compartments` with an uppercase `C` is also accepted for compatibility.
 `compartments` is the documented spelling.
+
+The three grouped-run fields are optional as a set and invalid when only partly
+configured. See [Group stratification](group-stratification.md).
 
 ## File paths and output
 
@@ -112,6 +118,10 @@ For every seed row:
 If `compartments` is provided, the seed compartment columns must match it
 exactly. If it is omitted, PatchSim infers compartments from all seed columns
 other than `patch`.
+
+Grouped runs instead use one row per patch/group pair and exclude both `patch`
+and `group` when inferring compartments. Group populations and the full file
+contract are documented in [Group stratification](group-stratification.md).
 
 ## Network file
 

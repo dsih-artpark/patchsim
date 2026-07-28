@@ -54,6 +54,10 @@ def setup_logger(model_name, config, num_patches, patches, base_model):
     logger.info(f"PatchFile: {config['PatchFile']}")
     logger.info(f"SeedFile: {config['SeedFile']}")
     logger.info(f"NetworkFile: {config['NetworkFile']}")
+    if "GroupFile" in config:
+        logger.info(f"GroupFile: {config['GroupFile']}")
+        logger.info(f"InteractionFile: {config['InteractionFile']}")
+        logger.info(f"InteractionUnits: {config['InteractionUnits']}")
     logger.info(f"OutputDir: {config['OutputDir']}")
     logger.info(f"Solver: {config['Solver']}")
     logger.info(f"TimeStep: {config['TimeStep']}")

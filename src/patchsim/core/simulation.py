@@ -3,6 +3,7 @@ This module is reserved for reusable simulation utilities or wrappers.
 ODE and discrete simulation logic is implemented in core/model.py.
 """
 
+import hashlib
 import os
 import re
 from numbers import Real
@@ -59,6 +60,9 @@ def get_config_schema() -> dict[str, Any]:
             "PatchFile": {"type": "string"},
             "SeedFile": {"type": "string"},
             "NetworkFile": {"type": ["string", "null"]},
+            "GroupFile": {"type": "string"},
+            "InteractionFile": {"type": "string"},
+            "InteractionUnits": {"type": "string", "minLength": 1},
             "OutputDir": {"type": "string"},
             "ModelName": {"type": "string"},
             "TMax": {"type": "integer", "minimum": 1},
@@ -104,6 +108,11 @@ def get_config_schema() -> dict[str, Any]:
                 "minProperties": 1,
                 "additionalProperties": {"type": "string"},
             },
+        },
+        "dependentRequired": {
+            "GroupFile": ["InteractionFile", "InteractionUnits"],
+            "InteractionFile": ["GroupFile", "InteractionUnits"],
+            "InteractionUnits": ["GroupFile", "InteractionFile"],
         },
         "additionalProperties": True,
     }
@@ -177,7 +186,7 @@ def load_config(config_path: str) -> dict[str, Any]:
 
     # Resolve relative paths against the config file directory.
     cfg_dir = cfg_path.parent
-    for key in ["PatchFile", "SeedFile", "NetworkFile", "OutputDir"]:
+    for key in ["PatchFile", "SeedFile", "NetworkFile", "GroupFile", "InteractionFile", "OutputDir"]:
         val = config.get(key)
         if isinstance(val, str) and val.strip():
             p = Path(val).expanduser()
@@ -206,6 +215,173 @@ def get_run_settings(config: dict[str, Any]) -> tuple[str, int, float]:
     return solver, t_max, time_step
 
 
+def _numeric_values(frame: pd.DataFrame, columns: list[str], source: str) -> None:
+    """Convert selected columns to finite numbers in place."""
+    for column in columns:
+        try:
+            frame[column] = pd.to_numeric(frame[column], errors="raise")
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"{source} column '{column}' must contain only numbers.") from e
+        if not np.all(np.isfinite(frame[column].to_numpy(dtype=float))):
+            raise ValueError(f"{source} column '{column}' must contain only finite numbers.")
+
+
+def _load_groups(
+    config: dict[str, Any], patches: list[str], populations: dict[str, float]
+) -> tuple[list[str], dict[tuple[str, str], float]]:
+    """Load the optional patch-by-group population table."""
+    fields = ("GroupFile", "InteractionFile", "InteractionUnits")
+    present = [field for field in fields if config.get(field) is not None]
+    if present and len(present) != len(fields):
+        missing = [field for field in fields if config.get(field) is None]
+        raise ValueError(f"Grouped simulations require {list(fields)} together; missing {missing}.")
+    if not present:
+        return [], {}
+
+    units = config["InteractionUnits"]
+    if not isinstance(units, str) or not units.strip():
+        raise ValueError("'InteractionUnits' must be a non-empty unit description.")
+
+    path = config["GroupFile"]
+    header = pd.read_csv(path, nrows=0).columns
+    patch_col = next((c for c in header if c.lower() == "patch"), None)
+    group_col = next((c for c in header if c.lower() == "group"), None)
+    pop_col = next((c for c in header if c.lower() == "population"), None)
+    if patch_col is None or group_col is None or pop_col is None:
+        raise ValueError(f"GroupFile ({path}) must have 'patch', 'group', and 'population' columns.")
+
+    frame = pd.read_csv(
+        path,
+        dtype={patch_col: "string", group_col: "string"},
+        keep_default_na=False,
+    ).rename(columns={patch_col: "patch", group_col: "group", pop_col: "population"})
+    _numeric_values(frame, ["population"], f"GroupFile ({path})")
+    for column in ("patch", "group"):
+        values = frame[column].astype(str)
+        if any(not value or value != value.strip() for value in values):
+            raise ValueError(f"GroupFile ({path}) contains an empty or whitespace-padded {column} identifier.")
+        frame[column] = values
+    if (frame["population"] < 0).any():
+        raise ValueError(f"GroupFile ({path}) populations must be non-negative.")
+    if frame.duplicated(["patch", "group"]).any():
+        raise ValueError(f"GroupFile ({path}) contains duplicate patch/group pairs.")
+
+    patch_set = set(frame["patch"])
+    expected_patch_set = set(patches)
+    if patch_set != expected_patch_set:
+        raise ValueError(
+            f"GroupFile ({path}) patch identifiers do not match PatchFile "
+            f"(missing={sorted(expected_patch_set - patch_set)}, extra={sorted(patch_set - expected_patch_set)})."
+        )
+
+    first_patch_groups = frame.loc[frame["patch"] == patches[0], "group"].tolist()
+    if not first_patch_groups:
+        raise ValueError(f"GroupFile ({path}) has no groups for first patch '{patches[0]}'.")
+    groups = list(first_patch_groups)
+    expected_groups = set(groups)
+    for patch in patches:
+        actual = set(frame.loc[frame["patch"] == patch, "group"])
+        if actual != expected_groups:
+            raise ValueError(
+                f"GroupFile ({path}) groups for patch '{patch}' do not match the first patch "
+                f"(missing={sorted(expected_groups - actual)}, extra={sorted(actual - expected_groups)})."
+            )
+        total = float(frame.loc[frame["patch"] == patch, "population"].sum())
+        if abs(total - populations[patch]) >= EPSILON:
+            raise ValueError(
+                f"Group populations for patch '{patch}' sum to {total}, not PatchFile population {populations[patch]}."
+            )
+
+    group_populations = {
+        (row.patch, row.group): float(row.population)
+        for row in frame[["patch", "group", "population"]].itertuples(index=False)
+    }
+    return groups, group_populations
+
+
+def _load_interactions(
+    config: dict[str, Any],
+    groups: list[str],
+    patches: list[str],
+    group_populations: dict[tuple[str, str], float],
+    network_matrix: np.ndarray,
+) -> tuple[np.ndarray | None, dict[str, Any] | None]:
+    """Load a shared group interaction matrix and return validation diagnostics."""
+    if not groups:
+        return None, None
+
+    path = config["InteractionFile"]
+    required = ["focal_group", "contributor_group", "weight"]
+    header = pd.read_csv(path, nrows=0).columns.tolist()
+    missing = [column for column in required if column not in header]
+    if missing:
+        raise ValueError(f"InteractionFile ({path}) is missing columns: {missing}.")
+
+    frame = pd.read_csv(
+        path,
+        dtype={"focal_group": "string", "contributor_group": "string"},
+        keep_default_na=False,
+    )
+    _numeric_values(frame, ["weight"], f"InteractionFile ({path})")
+    for column in ("focal_group", "contributor_group"):
+        values = frame[column].astype(str)
+        if any(not value or value != value.strip() for value in values):
+            raise ValueError(f"InteractionFile ({path}) contains an empty or whitespace-padded {column}.")
+        frame[column] = values
+    if (frame["weight"] < 0).any():
+        raise ValueError(f"InteractionFile ({path}) weights must be non-negative.")
+    if frame.duplicated(["focal_group", "contributor_group"]).any():
+        raise ValueError(f"InteractionFile ({path}) contains duplicate group pairs.")
+
+    expected_groups = set(groups)
+    for column in ("focal_group", "contributor_group"):
+        actual = set(frame[column])
+        unknown = actual - expected_groups
+        if unknown:
+            raise ValueError(f"InteractionFile ({path}) contains unknown groups in {column}: {sorted(unknown)}.")
+        absent = expected_groups - actual
+        if absent:
+            raise ValueError(
+                f"InteractionFile ({path}) must mention every group in {column}; missing {sorted(absent)}."
+            )
+
+    group_idx = {group: idx for idx, group in enumerate(groups)}
+    matrix = np.zeros((len(groups), len(groups)), dtype=float)
+    for row in frame.itertuples(index=False):
+        matrix[group_idx[row.focal_group], group_idx[row.contributor_group]] = float(row.weight)
+
+    max_reciprocity_residual = 0.0
+    for patch in patches:
+        for focal in groups:
+            for contributor in groups:
+                i = group_idx[focal]
+                j = group_idx[contributor]
+                forward = group_populations[(patch, focal)] * matrix[i, j]
+                reverse = group_populations[(patch, contributor)] * matrix[j, i]
+                denominator = max(forward, reverse)
+                residual = abs(forward - reverse) / denominator if denominator > 0 else 0.0
+                max_reciprocity_residual = max(max_reciprocity_residual, residual)
+
+    interaction_row_sums = matrix.sum(axis=1)
+    effective_spatial_matrix = np.ones((1, 1), dtype=float) if len(patches) == 1 else network_matrix
+    spatial_row_sums = effective_spatial_matrix.sum(axis=1)
+    diagnostics = {
+        "units": config["InteractionUnits"].strip(),
+        "sha256": hashlib.sha256(Path(path).read_bytes()).hexdigest(),
+        "interaction_row_sum": {
+            "min": float(interaction_row_sums.min()),
+            "max": float(interaction_row_sums.max()),
+        },
+        "spatial_row_sum": {
+            "min": float(spatial_row_sums.min()),
+            "max": float(spatial_row_sums.max()),
+        },
+        "max_local_reciprocity_residual": float(max_reciprocity_residual),
+        "reciprocity": "diagnostic_only",
+    }
+    return matrix, diagnostics
+
+
 def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, float], list, int]:
     """Set up the simulation model and initial conditions."""
     # Load patch data (accept either case for the 'patch'/'population' columns)
@@ -219,21 +395,36 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
         )
     patch_df = pd.read_csv(config["PatchFile"], converters={patch_col: str})
     patches = patch_df[patch_col].tolist()
+    if not patches:
+        raise ValueError(f"PatchFile ({config['PatchFile']}) must contain at least one patch.")
     if any(not patch.strip() for patch in patches):
         raise ValueError(f"PatchFile ({config['PatchFile']}) contains an empty patch identifier.")
+    if len(set(patches)) != len(patches):
+        raise ValueError(f"PatchFile ({config['PatchFile']}) contains duplicate patch identifiers.")
     populations = patch_df.set_index(patch_col)[pop_col].to_dict()
 
     for p, pop in populations.items():
-        if pop <= 0:
+        if not isinstance(pop, Real) or not np.isfinite(pop) or pop <= 0:
             raise ValueError(
                 f"Invalid population in {config['PatchFile']}: patch '{p}' has population {pop}.\n"
                 "Population must be a positive number (> 0).\n"
                 "Please correct the population value in your patch file."
             )
 
+    groups, group_populations = _load_groups(config, patches, populations)
+
     # Load seed data
-    seed_df = pd.read_csv(config["SeedFile"], converters={"patch": str})
-    seed_compartments = [col for col in seed_df.columns if col != "patch"]
+    seed_converters = {"patch": str}
+    if groups:
+        seed_converters["group"] = str
+    seed_df = pd.read_csv(config["SeedFile"], converters=seed_converters, keep_default_na=False)
+    if groups and "group" not in seed_df.columns:
+        raise ValueError(f"SeedFile ({config['SeedFile']}) must include a 'group' column for grouped simulations.")
+    if not groups and "group" in seed_df.columns:
+        raise ValueError("SeedFile includes 'group', but GroupFile and InteractionFile are not configured.")
+    identifier_columns = {"patch", "group"} if groups else {"patch"}
+    seed_compartments = [col for col in seed_df.columns if col not in identifier_columns]
+    _numeric_values(seed_df, seed_compartments, f"SeedFile ({config['SeedFile']})")
 
     configured_compartments = config.get("compartments", config.get("Compartments"))
     if configured_compartments is None:
@@ -255,6 +446,17 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
                 "Please ensure the SeedFile has columns matching your config compartments."
             )
 
+    if groups:
+        if seed_df.duplicated(["patch", "group"]).any():
+            raise ValueError(f"SeedFile ({config['SeedFile']}) contains duplicate patch/group pairs.")
+        expected_pairs = set(group_populations)
+        actual_pairs = set(zip(seed_df["patch"], seed_df["group"], strict=True))
+        if actual_pairs != expected_pairs:
+            raise ValueError(
+                f"SeedFile ({config['SeedFile']}) patch/group coverage is incomplete "
+                f"(missing={sorted(expected_pairs - actual_pairs)}, extra={sorted(actual_pairs - expected_pairs)})."
+            )
+
     for _, row in seed_df.iterrows():
         patch = row["patch"]
         if patch not in populations:
@@ -263,6 +465,9 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
                 f"Known patches from PatchFile: {sorted(populations.keys())}\n"
                 "Please ensure all patches in SeedFile match PatchFile."
             )
+        group = row["group"] if groups else None
+        if groups and group not in groups:
+            raise ValueError(f"Unknown group '{group}' in SeedFile ({config['SeedFile']}).")
         total = sum(row[c] for c in compartments)
         if not all(row[c] >= 0 for c in compartments):
             neg_comps = [c for c in compartments if row[c] < 0]
@@ -271,9 +476,12 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
                 f"Compartments with negative values: {neg_comps}\n"
                 "All seed values must be non-negative."
             )
-        if abs(total - populations[patch]) >= EPSILON:
+        expected_population = group_populations[(patch, group)] if groups else populations[patch]
+        if abs(total - expected_population) >= EPSILON:
+            stratum = f", group '{group}'" if groups else ""
             raise ValueError(
-                f"Seed mismatch for patch '{patch}': seed sum ({total}) != population ({populations[patch]}).\n"
+                f"Seed mismatch for patch '{patch}'{stratum}: "
+                f"seed sum ({total}) != population ({expected_population}).\n"
                 f"Seed compartments: {dict((c, row[c]) for c in compartments)}\n"
                 "Ensure seed values sum exactly to the patch population."
             )
@@ -317,6 +525,14 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
                     "Network weights must be non-negative. Please correct your network file."
                 )
             network_matrix[i, j] = row["weight"]
+
+    interaction_matrix, interaction_diagnostics = _load_interactions(
+        config,
+        groups,
+        patches,
+        group_populations,
+        network_matrix,
+    )
 
     # Set up model
     global_params = config.get("Parameters", {})
@@ -382,19 +598,28 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
     # Initialize the base model (will hold default/global transitions)
     base_model = CompartmentalModel(compartments=compartments, parameters=global_params, transitions=transitions)
 
+    # Create network model
+    net = NetworkModel(
+        base_model=base_model,
+        num_patches=num_patches,
+        network_matrix=network_matrix,
+        groups=groups,
+        interaction_matrix=interaction_matrix,
+    )
+
     # Prepare initial conditions
     patch_idx = {p: i for i, p in enumerate(patches)}
+    group_idx = {group: i for i, group in enumerate(groups)}
     y0 = {}
     for _, row in seed_df.iterrows():
         for c in compartments:
-            y0[f"{c}_{patch_idx[row['patch']]}"] = row[c]
-
-    # Create network model
-    net = NetworkModel(base_model=base_model, num_patches=num_patches, network_matrix=network_matrix)
+            group_position = group_idx[row["group"]] if groups else 0
+            y0[net.state_key(c, patch_idx[row["patch"]], group_position)] = row[c]
 
     # Attach per-patch parameters to the network model
     net.patch_parameters = patch_params
     net.patch_names = patches
+    net.interaction_diagnostics = interaction_diagnostics
 
     return net, y0, patches, num_patches
 
@@ -447,13 +672,14 @@ def run_simulation(
         plots_dir,
         model_name,
         compartments=list(net.base_model.compartments),
+        groups=net.groups,
         solver=solver,
     )
 
     plot_path = os.path.join(plots_dir, f"patch_timeseries_{model_name}_{solver}.png")
     logger.info(f"Saved all patch subplots to {plot_path}")
 
-    return {
+    summary = {
         "model_name": model_name,
         "output_dir": config["OutputDir"],
         "csv_path": csv_path,
@@ -464,3 +690,6 @@ def run_simulation(
         "solver": solver,
         "time_step": time_step,
     }
+    if net.groups:
+        summary.update({"num_groups": net.num_groups, "groups": net.groups})
+    return summary

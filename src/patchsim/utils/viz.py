@@ -12,6 +12,7 @@ def plot_patch_subplots(
     model_name,
     patch_parameters=None,
     compartments=None,
+    groups=None,
     solver="ode",
 ):
     """
@@ -26,10 +27,18 @@ def plot_patch_subplots(
     axes = axes.flatten() if n > 1 else [axes]
     for i, patch in enumerate(patches):
         ax = axes[i]
-        # Plot the model's actual compartments; fall back to those present for this patch.
         comps = compartments or [k[: -len(f"_{i}")] for k in out_ode if k.endswith(f"_{i}")]
-        for c in comps:
-            ax.plot(t_range, out_ode[f"{c}_{i}"], label=c)
+        if groups:
+            for group_idx, group in enumerate(groups):
+                for compartment in comps:
+                    ax.plot(
+                        t_range,
+                        out_ode[f"{compartment}_{i}_{group_idx}"],
+                        label=f"{compartment} ({group})",
+                    )
+        else:
+            for compartment in comps:
+                ax.plot(t_range, out_ode[f"{compartment}_{i}"], label=compartment)
         solver_label = "ODE" if solver == "ode" else "Discrete"
         title = f"Patch {patch} ({solver_label})"
         if patch_parameters and patch in patch_parameters:

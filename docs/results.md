@@ -67,12 +67,22 @@ B,500
 `I_0` is infectious population in patch `A`, and `I_1` is infectious population
 in patch `B`.
 
+Grouped runs add the zero-based group index:
+
+```csv
+time,S_0_0,I_0_0,R_0_0,S_0_1,I_0_1,R_0_1
+```
+
+`COMPARTMENT_PATCH_GROUP` follows `PatchFile` and `GroupFile` ordering. The JSON
+validation and run summaries include the ordered `groups` list.
+
 Compartment values are floating point for both built-in solvers. The discrete
 solver is deterministic explicit Euler, not an integer-state method.
 
 ## Plot
 
-The PNG contains one subplot per patch and one line per configured compartment.
+The PNG contains one subplot per patch. Ungrouped plots have one line per
+compartment; grouped plots have one line per compartment/group combination.
 Subplot titles use patch identifiers from `PatchFile`. Axes are numeric time and
 compartment count.
 
