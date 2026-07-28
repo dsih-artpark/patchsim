@@ -31,6 +31,7 @@ The CLI uses these conventions:
 | `init` | Create a project from a built-in template |
 | `validate` | Load and validate a configuration and its input files |
 | `run` | Run the configured solver and write artifacts |
+| `sensitivity` | Run or reuse a configured Sobol study |
 | `list-models` | List built-in project templates |
 | `generate-contacts` | Generate a validated spatial network CSV |
 
@@ -129,6 +130,25 @@ The CSV and PNG names are deterministic per solver. A rerun with the same
 different `TimeStep`. Use one output directory per retained scenario or run.
 Logs remain separate because their names include a timestamp.
 :::
+
+## `sensitivity`
+
+```bash
+patchsim sensitivity -c CONFIG [--json]
+```
+
+The command validates the simulation and `Sensitivity` block, reports the
+planned evaluation count to standard error, and computes first-order and
+total-order Sobol indices. It requires the `analysis` optional dependency.
+
+The result summary contains `reused`, planned and completed evaluation counts,
+elapsed seconds, and absolute paths to `samples.csv`, `responses.csv`,
+`indices.csv`, and `manifest.json`. JSON mode keeps standard output valid JSON.
+
+An existing named study is reused only when its request fingerprint and table
+hashes match. A reused invocation reports zero completed evaluations. Changed
+or incomplete studies fail rather than being overwritten. See the
+{ref}`worked workflow <sensitivity-study>`.
 
 ## `list-models`
 

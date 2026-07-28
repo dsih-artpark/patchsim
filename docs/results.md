@@ -22,6 +22,27 @@ The `OutputDir` path is resolved relative to the configuration file.
 PatchSim does not create or require a `.patchsim` directory. All current run
 artifacts are user-facing files.
 
+Sensitivity studies add one named directory:
+
+```text
+OutputDir/
+  sensitivity/
+    NAME/
+      samples.csv
+      responses.csv
+      indices.csv
+      manifest.json
+```
+
+`samples.csv` contains the SALib design, `responses.csv` contains one scalar
+per configured metric and sample, and `indices.csv` contains `S1`, `ST`, and
+their confidence intervals. `manifest.json` records method settings, versions,
+the normalized config, source/input hashes, and hashes of the three tables.
+The manifest does not copy its inputs.
+
+A matching named study is reused after hash verification. A changed or partial
+study is not overwritten.
+
 ## Retention and overwrite behavior
 
 The CSV and PNG filenames are deterministic for each solver. Running the same

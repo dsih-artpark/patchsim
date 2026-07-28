@@ -33,6 +33,7 @@ a network. Run `patchsim validate -c CONFIG` before `patchsim run`.
 | `compartments` | No | Ordered compartment names; inferred from `SeedFile` if absent |
 | `Parameters` | No | Global names available to transition expressions |
 | `PatchParameters` | No | Per-patch parameter overrides |
+| `Sensitivity` | For `sensitivity` | Sobol study name, seed, bounds, and scalar metrics |
 
 `Compartments` with an uppercase `C` is also accepted for compatibility.
 `compartments` is the documented spelling.
@@ -243,6 +244,22 @@ PatchParameters:
 
 Patch names are validated, and each override is merged with the global parameter
 mapping during setup. Both built-in solvers use these merged parameters.
+
+## Sensitivity block
+
+`Sensitivity` is optional for normal runs and required by `patchsim
+sensitivity`. `patchsim validate` checks it when present. Version 1 supports
+first-order and total-order Sobol indices for independent uniform bounds on
+global parameters. It does not sample patch-specific, group-specific, integer,
+categorical, correlated, network, or interaction-matrix inputs.
+
+`BaseSamples` must be a power of two of at least 2, and `Seed` is required. `Name`
+must be a single safe path component. Metrics sum exact output columns and use
+either `max` or `final`; names may not collide with sampled parameter columns or
+`sample_id`.
+
+See {ref}`Simulation workflow <sensitivity-study>` for the complete
+configuration and interpretation guidance.
 
 ## Accepted compatibility fields
 

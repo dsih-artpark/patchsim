@@ -18,6 +18,7 @@ def test_patchsim_sdk_exports():
     assert hasattr(patchsim, "load_config")
     assert hasattr(patchsim, "setup_simulation")
     assert hasattr(patchsim, "run_simulation")
+    assert hasattr(patchsim, "simulate")
     assert hasattr(patchsim, "plot_patch_subplots")
 
 

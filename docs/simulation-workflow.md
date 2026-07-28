@@ -53,6 +53,92 @@ The log and JSON run summary record the selected solver and `TimeStep`.
 The CSV and PNG are replaced by a rerun with the same `ModelName`, `OutputDir`,
 and solver. See [Results](results.md) for retention conventions.
 
+(sensitivity-study)=
+
+## 6. Optional sensitivity study
+
+Install the analysis dependency:
+
+```bash
+python -m pip install "patchsim[analysis]"
+```
+
+Add one `Sensitivity` block to the same simulation config:
+
+```yaml
+Sensitivity:
+  Name: beta-gamma
+  Method: sobol
+  BaseSamples: 256
+  Seed: 20260728
+  Parameters:
+    beta: [0.04, 0.12]
+    gamma: [0.05, 0.20]
+  Metrics:
+    peak_infectious:
+      Columns: [I_0, I_1]
+      Reduce: max
+    final_removed:
+      Columns: [R_0, R_1]
+      Reduce: final
+```
+
+The bounds define independent uniform input distributions. Both names must be
+global `Parameters`; a name also present in `PatchParameters` is rejected.
+Metric columns must exactly match the time-series columns for the configured
+patch and group structure. PatchSim sums each metric's columns at every
+reporting point, then takes `max` or `final`. A maximum is therefore a maximum
+on the reporting grid, not a continuous-time optimum.
+
+Validate before committing the compute budget:
+
+```bash
+patchsim validate -c config.yaml
+```
+
+With two parameters and `BaseSamples: 256`, the first-order/total-order Sobol
+design requires:
+
+```text
+256 * (2 + 2) = 1024 model evaluations
+```
+
+Run the study:
+
+```bash
+patchsim sensitivity -c config.yaml
+```
+
+PatchSim writes:
+
+```text
+OutputDir/
+  sensitivity/
+    beta-gamma/
+      samples.csv
+      responses.csv
+      indices.csv
+      manifest.json
+```
+
+`indices.csv` contains `S1`, `ST`, and their seeded bootstrap confidence
+interval half-widths for every metric/parameter pair. The intervals are the
+estimate plus or minus the corresponding `_conf` value. `S1` measures the
+parameter's first-order contribution; `ST` includes all interactions involving
+that parameter. A material `ST - S1` can indicate aggregate interactions, but
+this version does not attribute interactions to parameter pairs.
+
+Repeat the study with `BaseSamples` doubled and a different `Name`. Compare
+changes in the indices and confidence intervals; a power-of-two sample count
+does not certify convergence. Sobol analysis also assumes the configured
+independent bounds are scientifically meaningful. Correlated or jointly
+constrained parameters need another method.
+
+Reusing the same `Name` with the exact same config, inputs, method, and relevant
+versions verifies the saved hashes and returns the existing artifacts without
+new solves. PatchSim refuses an incomplete, modified, or different study at
+that path. It does not create a hidden cache or overwrite a study.
+
 ## Reproducible run checklist
 
 Retain:
@@ -65,3 +151,8 @@ Retain:
 
 The current run log records Python and platform details but does not capture the
 PatchSim package version or immutable copies of the inputs.
+
+For sensitivity studies, `manifest.json` records the normalized configuration,
+source and input hashes, method settings, versions, and artifact hashes. It
+detects changed files but does not copy them, so retain the original YAML and
+CSV inputs.

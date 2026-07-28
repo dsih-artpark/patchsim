@@ -23,6 +23,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 html_theme = "pydata_sphinx_theme"
 html_static_path = ["_static"]
+html_context = {"default_mode": "auto"}
 html_theme_options = {
     "icon_links": [
         {

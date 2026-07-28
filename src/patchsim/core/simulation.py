@@ -6,6 +6,7 @@ ODE and discrete simulation logic is implemented in core/model.py.
 import hashlib
 import os
 import re
+from copy import deepcopy
 from numbers import Real
 from pathlib import Path
 from typing import Any
@@ -102,6 +103,52 @@ def get_config_schema() -> dict[str, Any]:
                     },
                     "additionalProperties": True,
                 },
+            },
+            "Sensitivity": {
+                "type": "object",
+                "required": ["Name", "Method", "BaseSamples", "Seed", "Parameters", "Metrics"],
+                "properties": {
+                    "Name": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+                    },
+                    "Method": {"const": "sobol"},
+                    "BaseSamples": {
+                        "type": "integer",
+                        "minimum": 2,
+                        "description": "Power of two; minimum 2.",
+                    },
+                    "Seed": {"type": "integer", "minimum": 0},
+                    "Parameters": {
+                        "type": "object",
+                        "minProperties": 1,
+                        "additionalProperties": {
+                            "type": "array",
+                            "prefixItems": [{"type": "number"}, {"type": "number"}],
+                            "minItems": 2,
+                            "maxItems": 2,
+                        },
+                    },
+                    "Metrics": {
+                        "type": "object",
+                        "minProperties": 1,
+                        "additionalProperties": {
+                            "type": "object",
+                            "required": ["Columns", "Reduce"],
+                            "properties": {
+                                "Columns": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                    "minItems": 1,
+                                    "uniqueItems": True,
+                                },
+                                "Reduce": {"type": "string", "enum": ["max", "final"]},
+                            },
+                            "additionalProperties": False,
+                        },
+                    },
+                },
+                "additionalProperties": False,
             },
             "Transitions": {
                 "type": "object",
@@ -626,6 +673,63 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
     return net, y0, patches, num_patches
 
 
+def _simulate_prepared(
+    config: dict[str, Any],
+    net: NetworkModel,
+    y0: dict[str, float],
+) -> pd.DataFrame:
+    """Evaluate a prepared model on its configured reporting grid."""
+    solver, t_max, time_step = get_run_settings(config)
+    t_range = np.arange(t_max, dtype=float) * time_step
+    if solver == "ode":
+        _times, results = net.simulate_ode(y0, t_range)
+    else:
+        results = net.simulate_discrete(y0, t_range)
+
+    frame = pd.DataFrame(results)
+    frame.insert(0, "time", t_range)
+    return frame
+
+
+def simulate(
+    config: dict[str, Any] | str | Path,
+    *,
+    parameter_overrides: dict[str, Real] | None = None,
+) -> pd.DataFrame:
+    """Run a simulation in memory without mutating the config or writing files.
+
+    A mapping must already contain resolved input paths, as returned by
+    :func:`load_config`. Passing a path loads and resolves the configuration.
+    """
+    prepared = load_config(str(config)) if isinstance(config, (str, Path)) else deepcopy(config)
+    if not isinstance(prepared, dict):
+        raise TypeError("config must be a loaded configuration mapping or a path")
+
+    overrides = parameter_overrides or {}
+    if not isinstance(overrides, dict):
+        raise TypeError("parameter_overrides must be a mapping")
+    global_parameters = prepared.get("Parameters", {})
+    if not isinstance(global_parameters, dict):
+        raise ValueError("'Parameters' must be a mapping")
+
+    patch_parameter_names: set[str] = set()
+    for entry in prepared.get("PatchParameters", []):
+        if isinstance(entry, dict) and isinstance(entry.get("parameters", {}), dict):
+            patch_parameter_names.update(entry.get("parameters", {}))
+
+    for name, value in overrides.items():
+        if name not in global_parameters:
+            raise ValueError(f"Unknown global parameter override: {name!r}")
+        if name in patch_parameter_names:
+            raise ValueError(f"Cannot globally override {name!r}; it is also set in PatchParameters")
+        if isinstance(value, bool) or not isinstance(value, Real) or not np.isfinite(value):
+            raise ValueError(f"Parameter override {name!r} must be a finite real number")
+
+    prepared["Parameters"] = {**global_parameters, **overrides}
+    net, y0, _patches, _num_patches = setup_simulation(prepared)
+    return _simulate_prepared(prepared, net, y0)
+
+
 def run_simulation(
     config: dict[str, Any], model_name: str, net: NetworkModel, y0: dict[str, float], patches: list, num_patches: int
 ) -> dict[str, Any]:
@@ -649,19 +753,9 @@ def run_simulation(
     # Set up logger
     logger = setup_logger(model_name, config, num_patches, patches, net.base_model)
 
-    t_range = np.arange(t_max, dtype=float) * time_step
-
-    # Run simulation
-    if solver == "ode":
-        _times, results = net.simulate_ode(y0, t_range)
-    else:
-        results = net.simulate_discrete(y0, t_range)
-
-    # Save results
-    out_df = pd.DataFrame(results)
-    out_df["time"] = t_range
-    cols = ["time"] + [c for c in out_df.columns if c != "time"]
-    out_df = out_df[cols]
+    out_df = _simulate_prepared(config, net, y0)
+    t_range = out_df["time"].to_numpy()
+    results = {column: out_df[column].to_numpy() for column in out_df.columns if column != "time"}
 
     csv_path = os.path.join(runs_dir, f"all_patches_{model_name}_{solver}.csv")
     out_df.to_csv(csv_path, index=False)

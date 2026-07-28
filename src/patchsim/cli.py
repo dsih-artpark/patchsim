@@ -2,6 +2,7 @@ import argparse
 import json
 import logging
 import shutil
+import sys
 import textwrap
 from importlib import resources
 from pathlib import Path
@@ -19,6 +20,7 @@ from patchsim.core.simulation import (
     run_simulation,
     setup_simulation,
 )
+from patchsim.sensitivity import get_sensitivity_plan, run_sensitivity
 from patchsim.utils.geo import generate_contacts
 
 
@@ -62,8 +64,11 @@ def _cmd_validate(config_path: str, *, json_output: bool = False, schema: bool =
 
     config = load_config(config_path)
     net, _y0, patches, num_patches = setup_simulation(config)
+    sensitivity = get_sensitivity_plan(config, list(net.all_compartments), required=False)
     if not json_output:
         print(f"Configuration is valid: {config_path}")
+        if sensitivity:
+            print(f"Planned sensitivity evaluations: {sensitivity.evaluation_count}")
         if net.groups:
             diagnostics = net.interaction_diagnostics
             print(
@@ -89,8 +94,28 @@ def _cmd_validate(config_path: str, *, json_output: bool = False, schema: bool =
                     "interaction": net.interaction_diagnostics,
                 }
             )
+        if sensitivity:
+            result["sensitivity"] = {
+                "name": sensitivity.name,
+                "method": "sobol",
+                "num_parameters": len(sensitivity.parameters),
+                "evaluation_count": sensitivity.evaluation_count,
+            }
         return result
     return None
+
+
+def _cmd_sensitivity(config_path: str, *, json_output: bool = False) -> dict[str, Any]:
+    summary = run_sensitivity(config_path, progress=lambda message: print(message, file=sys.stderr))
+    result = {"ok": True, "config": config_path, **summary}
+    if not json_output:
+        action = "Reused" if summary["reused"] else "Completed"
+        print(f"{action} sensitivity study: {summary['output_dir']}")
+        print(f"Samples: {summary['samples_path']}")
+        print(f"Responses: {summary['responses_path']}")
+        print(f"Indices: {summary['indices_path']}")
+        print(f"Manifest: {summary['manifest_path']}")
+    return result
 
 
 def _copy_template_tree(template_node, target_path: Path) -> None:
@@ -225,6 +250,7 @@ Examples:
     uv run patchsim init my-project --template seir
     uv run patchsim run -c my-project/config.yaml
     uv run patchsim validate -c my-project/config.yaml
+    uv run patchsim sensitivity -c my-project/config.yaml
     uv run patchsim list-models
     uv run patchsim generate-contacts centroids.csv contacts.csv --id-column id \
         --kernel distance --decay 2 --min-distance-km 0.001 --normalize row --self-share 0.9
@@ -248,6 +274,10 @@ Examples:
     run_p = subparsers.add_parser("run", help="Run a simulation")
     run_p.add_argument("-c", "--config", required=True, help="Path to simulation config YAML")
     run_p.add_argument("--json", action="store_true", help="Emit machine-readable JSON summary")
+
+    sensitivity_p = subparsers.add_parser("sensitivity", help="Run or reuse a Sobol sensitivity study")
+    sensitivity_p.add_argument("-c", "--config", required=True, help="Path to simulation config YAML")
+    sensitivity_p.add_argument("--json", action="store_true", help="Emit machine-readable JSON summary")
 
     validate_p = subparsers.add_parser("validate", help="Validate config and inputs")
     validate_p.add_argument("-c", "--config", help="Path to simulation config YAML")
@@ -290,6 +320,10 @@ Examples:
             _cmd_init(args.name, force=args.force, template=args.template)
         elif args.command == "run":
             result = _cmd_run(args.config, json_output=args.json)
+            if args.json:
+                _emit_json(result)
+        elif args.command == "sensitivity":
+            result = _cmd_sensitivity(args.config, json_output=args.json)
             if args.json:
                 _emit_json(result)
         elif args.command == "validate":

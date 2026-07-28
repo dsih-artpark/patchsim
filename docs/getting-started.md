@@ -19,6 +19,12 @@ cd patchsim
 uv sync --extra dev --frozen
 ```
 
+Add `--extra analysis` when running sensitivity studies or their tests:
+
+```bash
+uv sync --extra analysis --extra dev --frozen
+```
+
 The rest of this page uses `patchsim`. Replace it with `uv run patchsim` when
 working from the source checkout.
 
