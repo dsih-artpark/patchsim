@@ -113,7 +113,11 @@ def get_config_schema() -> dict[str, Any]:
                         "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
                     },
                     "Method": {"const": "sobol"},
-                    "BaseSamples": {"type": "integer", "minimum": 2},
+                    "BaseSamples": {
+                        "type": "integer",
+                        "minimum": 2,
+                        "description": "Power of two; minimum 2.",
+                    },
                     "Seed": {"type": "integer", "minimum": 0},
                     "Parameters": {
                         "type": "object",

@@ -8,6 +8,7 @@ import re
 import shutil
 import tempfile
 import time
+from copy import deepcopy
 from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version
 from numbers import Real
@@ -279,6 +280,7 @@ def run_sensitivity(
     started = time.monotonic()
     source_path = Path(config_path).expanduser().resolve()
     config = load_config(str(source_path))
+    request_config = deepcopy(config)
     net, y0, _patches, _num_patches = setup_simulation(config)
     plan = get_sensitivity_plan(config, list(net.all_compartments))
     assert plan is not None
@@ -287,7 +289,7 @@ def run_sensitivity(
 
     sobol_sample, sobol_analyze, salib_version = _load_salib()
     source_config_sha256 = _sha256(source_path)
-    request = _request_record(config, salib_version, source_config_sha256)
+    request = _request_record(request_config, salib_version, source_config_sha256)
     fingerprint = hashlib.sha256(_canonical_bytes(request)).hexdigest()
     output_root = Path(config["OutputDir"]).resolve()
     sensitivity_root = output_root / "sensitivity"

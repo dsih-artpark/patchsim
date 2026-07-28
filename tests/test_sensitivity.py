@@ -125,6 +125,10 @@ def test_sobol_study_writes_complete_deterministic_artifacts(tmp_path):
     assert manifest["evaluation_count"] == 128
     assert manifest["request"]["method"]["calc_second_order"] is False
     assert manifest["request"]["method"]["num_resamples"] == 100
+    assert manifest["request"]["normalized_config"]["Parameters"] == {
+        "theta": 0.1,
+        "unused": 1.0,
+    }
     assert set(manifest["artifacts"]) == {"samples.csv", "responses.csv", "indices.csv"}
 
 
@@ -241,11 +245,13 @@ def test_validate_and_sensitivity_cli_json(tmp_path):
         ["patchsim", "validate", "-c", str(config_path), "--json"],
         capture_output=True,
         text=True,
+        timeout=300,
     )
     result = subprocess.run(
         ["patchsim", "sensitivity", "-c", str(config_path), "--json"],
         capture_output=True,
         text=True,
+        timeout=300,
     )
 
     assert validation.returncode == 0, validation.stderr

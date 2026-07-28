@@ -122,10 +122,11 @@ OutputDir/
 ```
 
 `indices.csv` contains `S1`, `ST`, and their seeded bootstrap confidence
-interval widths for every metric/parameter pair. `S1` measures the parameter's
-first-order contribution; `ST` includes all interactions involving that
-parameter. A material `ST - S1` can indicate aggregate interactions, but this
-version does not attribute interactions to parameter pairs.
+interval half-widths for every metric/parameter pair. The intervals are the
+estimate plus or minus the corresponding `_conf` value. `S1` measures the
+parameter's first-order contribution; `ST` includes all interactions involving
+that parameter. A material `ST - S1` can indicate aggregate interactions, but
+this version does not attribute interactions to parameter pairs.
 
 Repeat the study with `BaseSamples` doubled and a different `Name`. Compare
 changes in the indices and confidence intervals; a power-of-two sample count
