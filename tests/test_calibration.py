@@ -2,6 +2,7 @@ import json
 import math
 import shutil
 import subprocess
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -422,6 +423,18 @@ def test_clean_recalibration_produces_identical_artifacts(tmp_path):
     second = run_calibration(config_path)
 
     assert {name: (Path(second["output_dir"]) / name).read_bytes() for name in artifact_names} == first_bytes
+
+
+def test_yaml_date_is_serialized_in_calibration_provenance(tmp_path):
+    config_path = _write_project(tmp_path)
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    config["StartDate"] = date(2020, 1, 1)
+    config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
+
+    summary = run_calibration(config_path)
+    manifest = json.loads(Path(summary["manifest_path"]).read_text(encoding="utf-8"))
+
+    assert manifest["request"]["normalized_config"]["StartDate"] == "2020-01-01"
 
 
 def test_interrupted_publication_removes_temporary_study(tmp_path, monkeypatch):

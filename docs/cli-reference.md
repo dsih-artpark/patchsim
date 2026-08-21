@@ -166,10 +166,10 @@ the start count, warnings, and the maximum actual forward simulations to standar
 error, then runs bounded deterministic TRF least squares from each declared
 start. It uses existing SciPy dependencies.
 
-The summary contains `reused`, `n`, `p`, start and selected-start counts, actual
-forward simulations, elapsed seconds, warnings, and absolute paths to
-`estimates.csv`, `fitted-seeds.csv`, `attempts.csv`, `residuals.csv`, and
-`manifest.json`. JSON mode keeps standard output valid JSON.
+The summary contains `reused`, `n`, `p`, the start count, the zero-based
+selected-start index, actual forward simulations, elapsed seconds, warnings,
+and absolute paths to `estimates.csv`, `fitted-seeds.csv`, `attempts.csv`,
+`residuals.csv`, and `manifest.json`. JSON mode keeps standard output valid JSON.
 
 One failed start does not discard successful starts. If every start fails, no
 study directory is published. A matching named study is reused only after its

@@ -29,8 +29,8 @@ version, and validate every configuration before running it.
   otherwise.
 - Output columns such as `I_0` use the zero-based row order from `PatchFile`; the
   suffix is not the patch identifier.
-- Examples describe behavior in the current code. Planned plugin and calibration
-  features are not documented as available.
+- Examples describe behavior in the current code. Planned plugin features are
+  not documented as available.
 
 ```{toctree}
 :maxdepth: 2

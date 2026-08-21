@@ -451,7 +451,7 @@ def _sha256(path: Path) -> str:
 
 
 def _canonical_bytes(value: Any) -> bytes:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False, default=str).encode("utf-8")
 
 
 def _software_versions() -> dict[str, str]:
