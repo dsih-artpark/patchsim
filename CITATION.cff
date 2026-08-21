@@ -3,6 +3,12 @@ message: "If you use PatchSim, please cite the software using this metadata."
 type: software
 title: "PatchSim: a modular simulation framework for patch-based metapopulation epidemiology"
 version: 0.1.0
+doi: 10.5281/zenodo.22051463
+date-released: 2026-08-22
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.22051462
+    description: Concept DOI for all PatchSim versions
 abstract: >-
   PatchSim is a Python framework for simulating compartmental infectious disease
   dynamics across spatial patches and optional population groups.

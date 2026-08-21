@@ -1,5 +1,7 @@
 # PatchSim
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22051462.svg)](https://doi.org/10.5281/zenodo.22051462)
+
 > **Release status:** PatchSim follows semantic versioning. Before 1.0, minor releases
 > may contain breaking API or configuration changes.
 
