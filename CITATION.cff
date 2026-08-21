@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use PatchSim, please cite the software using this metadata."
+type: software
+title: "PatchSim: a modular simulation framework for patch-based metapopulation epidemiology"
+version: 0.1.0
+abstract: >-
+  PatchSim is a Python framework for simulating compartmental infectious disease
+  dynamics across spatial patches and optional population groups.
+authors:
+  - family-names: Illikkal
+    given-names: Adish Assain
+    orcid: "https://orcid.org/0009-0001-1009-4560"
+    affiliation: "AI and Robotics Technology Park (ARTPARK), Indian Institute of Science, Bengaluru, India"
+  - family-names: Mukherjee
+    given-names: Shreya
+    orcid: "https://orcid.org/0009-0008-3629-0376"
+    affiliation: "AI and Robotics Technology Park (ARTPARK), Indian Institute of Science, Bengaluru, India"
+  - family-names: S
+    given-names: Sneha
+    orcid: "https://orcid.org/0009-0009-1854-6443"
+    affiliation: "AI and Robotics Technology Park (ARTPARK), Indian Institute of Science, Bengaluru, India"
+repository-code: "https://github.com/dsih-artpark/patchsim"
+url: "https://patchsim.readthedocs.io/"
+license: GPL-3.0-only
+keywords:
+  - epidemiology
+  - metapopulation
+  - compartmental models
+  - spatial networks

@@ -458,7 +458,7 @@ def _software_versions() -> dict[str, str]:
     try:
         patchsim_version = version("patchsim")
     except PackageNotFoundError:
-        patchsim_version = "0.1.0b1"
+        patchsim_version = "0.1.0"
     return {
         "patchsim": patchsim_version,
         "python": platform.python_version(),

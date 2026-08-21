@@ -1,7 +1,7 @@
 # PatchSim
 
-> ⚠️ **WARNING: Active Development**  
-> PatchSim is currently under **heavy development**. Features are experimental and subject to change. Not recommended for production use at this stage.
+> **Release status:** PatchSim follows semantic versioning. Before 1.0, minor releases
+> may contain breaking API or configuration changes.
 
 ![PatchSim Banner](assets/patchsim-banner.png)
 
