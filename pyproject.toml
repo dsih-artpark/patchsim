@@ -4,13 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "patchsim"
-version = "0.1.0b1"
+version = "0.1.0"
 description = "A modular simulation framework for patch-based metapopulation epidemiology"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
 classifiers = [
-    "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Programming Language :: Python :: 3",
@@ -22,9 +21,9 @@ classifiers = [
 ]
 
 authors = [
-    { name = "Adish Assain", email = "adish@artpark.in" },
-    { name = "Sneha S", email = "sneha@artpark.in" },
-    { name = "Shreya Mukherjee", email = "shreyamukherjee@artpark.in" }
+    { name = "Adish Assain Illikkal", email = "adish@artpark.in" },
+    { name = "Shreya Mukherjee", email = "shreyamukherjee@artpark.in" },
+    { name = "Sneha S", email = "sneha@artpark.in" }
 ]
 
 dependencies = [
@@ -77,7 +76,7 @@ dev = [
     "mypy",
     "rich>=13.0.0",
     "pre-commit>=3.0.0",
-    "twine>=5.0.0",
+    "twine>=7.0.0",
 ]
 
 notebook = [
@@ -113,4 +112,6 @@ include = [
     "/src/patchsim/templates/**",
     "/README.md",
     "/LICENSE",
+    "/CITATION.cff",
+    "/CHANGELOG.md",
 ]
