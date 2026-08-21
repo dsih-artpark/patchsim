@@ -3,6 +3,11 @@ import pytest
 from patchsim.core.model import CompartmentalModel, NetworkModel
 
 
+def test_parameter_and_compartment_names_must_be_distinct():
+    with pytest.raises(ValueError, match=r"shared names: \['S'\]"):
+        CompartmentalModel(compartments=["S", "I"], parameters={"S": 0.5}, transitions=[])
+
+
 def test_compute_rates_with_parameters():
     compartments = ["S", "I", "R"]
     transitions = [

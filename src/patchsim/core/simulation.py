@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from patchsim.core.model import CompartmentalModel, NetworkModel
+from patchsim.core.model import CompartmentalModel, NetworkModel, _validate_expression_names
 from patchsim.utils.logger import setup_logger
 from patchsim.utils.viz import plot_patch_subplots
 
@@ -603,6 +603,7 @@ def setup_simulation(config: dict[str, Any]) -> tuple[NetworkModel, dict[str, fl
     patch_param_names = set()
     for per_patch in patch_params.values():
         patch_param_names |= set(per_patch.keys())
+    _validate_expression_names(compartments, set(global_params) | patch_param_names)
     allowed_names = set(compartments) | set(global_params.keys()) | patch_param_names
     for k, v in transitions_cfg.items():
         parts = [p.strip() for p in str(k).split("->")]

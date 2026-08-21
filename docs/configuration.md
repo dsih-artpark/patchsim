@@ -174,7 +174,8 @@ Transitions:
 ```
 
 Parameter and compartment names become identifiers in transition expressions.
-Names are case-sensitive.
+Names are case-sensitive, and a parameter cannot have the same name as a
+compartment.
 
 ### Transition expression rules
 

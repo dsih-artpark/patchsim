@@ -92,6 +92,14 @@ def test_setup_simulation_rejects_unknown_transition_identifiers(tmp_data_dir):
         setup_simulation(cfg)
 
 
+def test_setup_simulation_rejects_patch_parameter_compartment_collision(tmp_data_dir):
+    cfg = load_config(tmp_data_dir["config"])
+    cfg["PatchParameters"] = [{"patch": "A", "parameters": {"S": 0.5}}]
+
+    with pytest.raises(ValueError, match=r"shared names: \['S'\]"):
+        setup_simulation(cfg)
+
+
 def test_setup_simulation_rejects_compartment_mismatch(tmp_data_dir):
     with open(tmp_data_dir["config"], "r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
