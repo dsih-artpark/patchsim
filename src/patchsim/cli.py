@@ -11,6 +11,7 @@ from typing import Any
 import yaml
 
 from patchsim import __version__
+from patchsim.calibration import get_calibration_plan, run_calibration
 from patchsim.core.simulation import (
     get_available_template_names,
     get_config_schema,
@@ -63,12 +64,21 @@ def _cmd_validate(config_path: str, *, json_output: bool = False, schema: bool =
         return get_config_schema()
 
     config = load_config(config_path)
-    net, _y0, patches, num_patches = setup_simulation(config)
+    net, y0, patches, num_patches = setup_simulation(config)
     sensitivity = get_sensitivity_plan(config, list(net.all_compartments), required=False)
+    calibration = get_calibration_plan(config, net, y0, required=False)
     if not json_output:
         print(f"Configuration is valid: {config_path}")
         if sensitivity:
             print(f"Planned sensitivity evaluations: {sensitivity.evaluation_count}")
+        if calibration:
+            print(
+                f"Calibration observations: {calibration.n}; fitted variables: {calibration.p}; "
+                f"starts: {calibration.start_count}"
+            )
+            print(f"Maximum forward simulations: {calibration.max_forward_simulations}")
+            for warning in calibration.warnings:
+                print(f"Warning: {warning}", file=sys.stderr)
         if net.groups:
             diagnostics = net.interaction_diagnostics
             print(
@@ -101,6 +111,16 @@ def _cmd_validate(config_path: str, *, json_output: bool = False, schema: bool =
                 "num_parameters": len(sensitivity.parameters),
                 "evaluation_count": sensitivity.evaluation_count,
             }
+        if calibration:
+            result["calibration"] = {
+                "name": calibration.name,
+                "method": "least_squares",
+                "n": calibration.n,
+                "p": calibration.p,
+                "start_count": calibration.start_count,
+                "max_forward_simulations": calibration.max_forward_simulations,
+                "warnings": list(calibration.warnings),
+            }
         return result
     return None
 
@@ -114,6 +134,20 @@ def _cmd_sensitivity(config_path: str, *, json_output: bool = False) -> dict[str
         print(f"Samples: {summary['samples_path']}")
         print(f"Responses: {summary['responses_path']}")
         print(f"Indices: {summary['indices_path']}")
+        print(f"Manifest: {summary['manifest_path']}")
+    return result
+
+
+def _cmd_calibrate(config_path: str, *, json_output: bool = False) -> dict[str, Any]:
+    summary = run_calibration(config_path, progress=lambda message: print(message, file=sys.stderr))
+    result = {"ok": True, "config": config_path, **summary}
+    if not json_output:
+        action = "Reused" if summary["reused"] else "Completed"
+        print(f"{action} calibration study: {summary['output_dir']}")
+        print(f"Estimates: {summary['estimates_path']}")
+        print(f"Fitted seeds: {summary['fitted_seeds_path']}")
+        print(f"Attempts: {summary['attempts_path']}")
+        print(f"Residuals: {summary['residuals_path']}")
         print(f"Manifest: {summary['manifest_path']}")
     return result
 
@@ -251,6 +285,7 @@ Examples:
     uv run patchsim run -c my-project/config.yaml
     uv run patchsim validate -c my-project/config.yaml
     uv run patchsim sensitivity -c my-project/config.yaml
+    uv run patchsim calibrate -c my-project/config.yaml
     uv run patchsim list-models
     uv run patchsim generate-contacts centroids.csv contacts.csv --id-column id \
         --kernel distance --decay 2 --min-distance-km 0.001 --normalize row --self-share 0.9
@@ -278,6 +313,10 @@ Examples:
     sensitivity_p = subparsers.add_parser("sensitivity", help="Run or reuse a Sobol sensitivity study")
     sensitivity_p.add_argument("-c", "--config", required=True, help="Path to simulation config YAML")
     sensitivity_p.add_argument("--json", action="store_true", help="Emit machine-readable JSON summary")
+
+    calibration_p = subparsers.add_parser("calibrate", help="Run or reuse a bounded calibration study")
+    calibration_p.add_argument("-c", "--config", required=True, help="Path to simulation config YAML")
+    calibration_p.add_argument("--json", action="store_true", help="Emit machine-readable JSON summary")
 
     validate_p = subparsers.add_parser("validate", help="Validate config and inputs")
     validate_p.add_argument("-c", "--config", help="Path to simulation config YAML")
@@ -324,6 +363,10 @@ Examples:
                 _emit_json(result)
         elif args.command == "sensitivity":
             result = _cmd_sensitivity(args.config, json_output=args.json)
+            if args.json:
+                _emit_json(result)
+        elif args.command == "calibrate":
+            result = _cmd_calibrate(args.config, json_output=args.json)
             if args.json:
                 _emit_json(result)
         elif args.command == "validate":

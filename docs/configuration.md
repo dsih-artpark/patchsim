@@ -34,6 +34,7 @@ a network. Run `patchsim validate -c CONFIG` before `patchsim run`.
 | `Parameters` | No | Global names available to transition expressions |
 | `PatchParameters` | No | Per-patch parameter overrides |
 | `Sensitivity` | For `sensitivity` | Sobol study name, seed, bounds, and scalar metrics |
+| `Calibration` | For `calibrate` | Prepared observations, fit variables, bounds, and starts |
 
 `Compartments` with an uppercase `C` is also accepted for compatibility.
 `compartments` is the documented spelling.
@@ -257,6 +258,68 @@ categorical, correlated, network, or interaction-matrix inputs.
 must be a single safe path component. Metrics sum exact output columns and use
 either `max` or `final`; names may not collide with sampled parameter columns or
 `sample_id`.
+
+## Calibration block
+
+`Calibration` is optional for normal runs and required by `patchsim calibrate`.
+PatchSim expects observations that the user has already cleaned and transformed
+into the same units and epidemiological meaning as model states.
+
+```yaml
+Calibration:
+  Name: beta-i0
+  Method: least_squares
+  Observations: data/observations.csv
+  MaxEvaluations: 200
+  Observables:
+    infectious_total:
+      Columns: [I_0, I_1]
+      Scale: 100.0
+  Parameters:
+    beta: [0.02, 0.20]
+  InitialConditions:
+    - Patch: A
+      Remainder: S
+      Fit:
+        I: [1, 100]
+  Starts:
+    - Parameters:
+        beta: 0.05
+      InitialConditions:
+        - Patch: A
+          Values:
+            I: 10
+```
+
+The observation CSV has exactly three columns:
+
+```csv
+time,observable,value
+0,infectious_total,7
+7,infectious_total,31
+```
+
+Each observable sums its exact output columns at a reporting point. `Scale` is
+a required positive residual scale; PatchSim minimizes
+`(prediction - value) / Scale` and performs no automatic weighting.
+
+Observation times are numeric offsets from model time zero and must match the
+configured reporting grid. `validate` warns about mismatches; `calibrate`
+refuses to discard or interpolate them. Missing values, duplicate
+`(time, observable)` rows, unknown outputs, configured observables with no rows,
+and additional CSV columns are rejected.
+
+Global fit parameters require finite bounds and cannot also appear in
+`PatchParameters`. Initial conditions are optional fit variables identified by
+patch, optional group, and compartment. The declared remainder is derived on
+every evaluation so the patch/group population remains fixed. A value used to
+construct a fixed seed should not also be counted as an observation residual.
+
+The configured parameter and seed values form the first starting point.
+Additional starts are explicit and complete; PatchSim does not generate random
+starts. `MaxEvaluations` limits actual forward simulations per start, including
+finite-difference evaluations. See the {ref}`worked calibration workflow
+<calibration-study>` for the complete process.
 
 See {ref}`Simulation workflow <sensitivity-study>` for the complete
 configuration and interpretation guidance.
