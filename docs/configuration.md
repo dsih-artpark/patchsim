@@ -183,13 +183,12 @@ The current evaluator accepts:
 
 - finite real numeric literals;
 - parameter and compartment names;
-- binary `+`, `-`, `*`, `/`, `//`, `%`, and `**`; and
+- binary `+`, `-`, `*`, `/`, and `**`; and
 - unary `+` and `-`.
 
 Function calls, attribute access, indexing, comparisons, booleans, conditionals,
-and comprehensions are rejected. `//` and `%` are accepted by the current
-evaluator, but they introduce discontinuities and should be avoided in rate
-expressions.
+and comprehensions are rejected. Floor division (`//`) and modulo (`%`) are also
+rejected because they introduce discontinuities into rate expressions.
 
 An expression that does not mention its source compartment is treated as a
 per-capita rate and multiplied by the source:

@@ -83,6 +83,12 @@ def test_division_by_zero_is_reported_as_an_expression_error():
         _model("beta / 0").compute_rates({"S": 1.0, "I": 1.0})
 
 
+@pytest.mark.parametrize("expr", ["S // 2", "S % 2"])
+def test_discontinuous_binary_operators_are_rejected(expr):
+    with pytest.raises(ValueError, match="not allowed"):
+        _model(expr).compute_rates({"S": 4.0, "I": 1.0})
+
+
 def test_deeply_nested_expression_is_rejected_not_crashed():
     """Nesting deep enough to exhaust the interpreter stack must surface as a config error.
 
