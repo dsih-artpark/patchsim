@@ -15,6 +15,12 @@ _NEGATIVITY_ROUNDOFF_FACTOR = 64
 _MAX_EXPRESSION_IN_ERROR = 80  # max expression length shown in error messages
 
 
+def _validate_expression_names(compartments, parameter_names) -> None:
+    overlap = sorted(set(compartments) & set(parameter_names))
+    if overlap:
+        raise ValueError(f"Parameter and compartment names must be distinct; shared names: {overlap}")
+
+
 def _validated_time_grid(t_range: list[float]) -> "np.ndarray":
     """Return ``t_range`` as a finite, strictly increasing 1-D array of time points."""
     times = np.asarray(t_range, dtype=float)
@@ -73,6 +79,7 @@ class CompartmentalModel:
 
     def __init__(self, compartments: list[str], parameters: dict[str, float], transitions: list[dict[str, Any]]):
         """Initialize the model with compartments, parameters, and transitions."""
+        _validate_expression_names(compartments, parameters)
         self.compartments = compartments
         self.parameters = parameters
         self.transitions = transitions
