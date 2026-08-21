@@ -132,6 +132,9 @@ uv run patchsim run -c my-project/config.yaml --json
 # Run or reuse a configured Sobol sensitivity study
 uv run patchsim sensitivity -c my-project/config.yaml
 
+# Run or reuse a configured bounded calibration study
+uv run patchsim calibrate -c my-project/config.yaml
+
 # List built-in model references and YAML templates
 uv run patchsim list-models
 
@@ -146,6 +149,9 @@ import patchsim
 
 config = patchsim.load_config("config.yaml")
 frame = patchsim.simulate(config, parameter_overrides={"beta": 0.08})
+
+# A configured built-in fit writes verified study artifacts
+summary = patchsim.run_calibration("config.yaml")
 ```
 
 `simulate` returns the configured time series without writing files or mutating
@@ -157,7 +163,7 @@ YAML configuration defines model parameters, transition expressions, input
 files, solver settings, and output location. See the
 [configuration reference](https://patchsim.readthedocs.io/en/latest/configuration.html)
 and the
-[worked simulation and sensitivity workflow](https://patchsim.readthedocs.io/en/latest/simulation-workflow.html).
+[worked simulation, sensitivity, and calibration workflow](https://patchsim.readthedocs.io/en/latest/simulation-workflow.html).
 
 ---
 

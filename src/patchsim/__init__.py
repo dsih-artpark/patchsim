@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from importlib.metadata import PackageNotFoundError, version
 
+from patchsim.calibration import run_calibration
 from patchsim.core.model import CompartmentalModel, NetworkModel
 from patchsim.core.simulation import load_config, run_simulation, setup_simulation, simulate
 from patchsim.utils.viz import plot_patch_subplots
@@ -19,6 +20,7 @@ __all__ = [
     "__version__",
     "load_config",
     "plot_patch_subplots",
+    "run_calibration",
     "run_simulation",
     "setup_simulation",
     "simulate",

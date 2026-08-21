@@ -43,6 +43,31 @@ The manifest does not copy its inputs.
 A matching named study is reused after hash verification. A changed or partial
 study is not overwritten.
 
+Calibration studies add another named directory:
+
+```text
+OutputDir/
+  calibration/
+    NAME/
+      estimates.csv
+      fitted-seeds.csv
+      attempts.csv
+      residuals.csv
+      manifest.json
+```
+
+`estimates.csv` contains the selected global parameters and fitted initial
+states with bounds and active-bound status. `fitted-seeds.csv` contains the
+complete population-conserving selected initial state. `attempts.csv` retains
+the termination and actual forward-simulation count for every start.
+`residuals.csv` aligns observed and predicted values for the selected start.
+The manifest records input hashes, software versions, local Jacobian rank and
+conditioning, and hashes of all four tables. These diagnostics do not establish
+structural identifiability or parameter uncertainty.
+
+A matching named calibration is reused after hash verification. Changed,
+partial, or modified studies are not overwritten.
+
 ## Retention and overwrite behavior
 
 The CSV and PNG filenames are deterministic for each solver. Running the same

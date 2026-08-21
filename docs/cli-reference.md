@@ -32,6 +32,7 @@ The CLI uses these conventions:
 | `validate` | Load and validate a configuration and its input files |
 | `run` | Run the configured solver and write artifacts |
 | `sensitivity` | Run or reuse a configured Sobol study |
+| `calibrate` | Run or reuse a bounded least-squares calibration |
 | `list-models` | List built-in project templates |
 | `generate-contacts` | Generate a validated spatial network CSV |
 
@@ -86,6 +87,10 @@ Configuration is valid: config.yaml
 JSON output includes `ok`, `config`, `model_name`, `num_patches`, and `patches`.
 Grouped validation additionally includes `num_groups`, ordered `groups`, and
 interaction diagnostics suitable for saving with a study.
+When `Calibration` is present, validation reports `n`, `p`, starts, the maximum
+forward simulations, and time-alignment or single-start warnings. A time warning
+does not make the simulation configuration invalid, but `calibrate` will refuse
+to run until the observations are aligned.
 `--schema` prints the JSON Schema used for editor and tooling integration.
 
 ## `run`
@@ -149,6 +154,27 @@ An existing named study is reused only when its request fingerprint and table
 hashes match. A reused invocation reports zero completed evaluations. Changed
 or incomplete studies fail rather than being overwritten. See the
 {ref}`worked workflow <sensitivity-study>`.
+
+## `calibrate`
+
+```bash
+patchsim calibrate -c CONFIG [--json]
+```
+
+The command validates the simulation and `Calibration` block, reports `n`, `p`,
+the start count, warnings, and the maximum actual forward simulations to standard
+error, then runs bounded deterministic TRF least squares from each declared
+start. It uses existing SciPy dependencies.
+
+The summary contains `reused`, `n`, `p`, start and selected-start counts, actual
+forward simulations, elapsed seconds, warnings, and absolute paths to
+`estimates.csv`, `fitted-seeds.csv`, `attempts.csv`, `residuals.csv`, and
+`manifest.json`. JSON mode keeps standard output valid JSON.
+
+One failed start does not discard successful starts. If every start fails, no
+study directory is published. A matching named study is reused only after its
+request and artifact hashes pass verification. See the {ref}`worked calibration
+workflow <calibration-study>`.
 
 ## `list-models`
 

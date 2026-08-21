@@ -16,7 +16,7 @@ version, and validate every configuration before running it.
 - [Mathematical model](mathematical-model.md): transition and network equations.
 - [Group stratification](group-stratification.md): custom groups and interaction matrices.
 - [Contact generation](contact-generation.md): spatial kernels, units, and validation.
-- [Simulation workflow](simulation-workflow.md): solver steps and a complete Sobol example.
+- [Simulation workflow](simulation-workflow.md): solver steps, Sobol analysis, and calibration examples.
 - [Results](results.md): output paths, column naming, and rerun behavior.
 
 ## Documentation conventions

@@ -150,6 +150,84 @@ def get_config_schema() -> dict[str, Any]:
                 },
                 "additionalProperties": False,
             },
+            "Calibration": {
+                "type": "object",
+                "required": ["Name", "Method", "Observations", "MaxEvaluations", "Observables"],
+                "properties": {
+                    "Name": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+                    },
+                    "Method": {"const": "least_squares"},
+                    "Observations": {"type": "string", "minLength": 1},
+                    "MaxEvaluations": {"type": "integer", "minimum": 1},
+                    "Observables": {
+                        "type": "object",
+                        "minProperties": 1,
+                        "additionalProperties": {
+                            "type": "object",
+                            "required": ["Columns", "Scale"],
+                            "properties": {
+                                "Columns": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                    "minItems": 1,
+                                    "uniqueItems": True,
+                                },
+                                "Scale": {"type": "number", "exclusiveMinimum": 0},
+                            },
+                            "additionalProperties": False,
+                        },
+                    },
+                    "Parameters": {
+                        "type": "object",
+                        "minProperties": 1,
+                        "additionalProperties": {
+                            "type": "array",
+                            "prefixItems": [{"type": "number"}, {"type": "number"}],
+                            "minItems": 2,
+                            "maxItems": 2,
+                        },
+                    },
+                    "InitialConditions": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                            "type": "object",
+                            "required": ["Patch", "Remainder", "Fit"],
+                            "properties": {
+                                "Patch": {"type": "string"},
+                                "Group": {"type": "string"},
+                                "Remainder": {"type": "string"},
+                                "Fit": {
+                                    "type": "object",
+                                    "minProperties": 1,
+                                    "additionalProperties": {
+                                        "type": "array",
+                                        "prefixItems": [{"type": "number"}, {"type": "number"}],
+                                        "minItems": 2,
+                                        "maxItems": 2,
+                                    },
+                                },
+                            },
+                            "additionalProperties": False,
+                        },
+                    },
+                    "Starts": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "Parameters": {"type": "object"},
+                                "InitialConditions": {"type": "array"},
+                            },
+                            "additionalProperties": False,
+                        },
+                    },
+                },
+                "anyOf": [{"required": ["Parameters"]}, {"required": ["InitialConditions"]}],
+                "additionalProperties": False,
+            },
             "Transitions": {
                 "type": "object",
                 "minProperties": 1,
@@ -239,6 +317,14 @@ def load_config(config_path: str) -> dict[str, Any]:
             p = Path(val).expanduser()
             if not p.is_absolute():
                 config[key] = str((cfg_dir / p).resolve())
+
+    calibration = config.get("Calibration")
+    if isinstance(calibration, dict):
+        observations = calibration.get("Observations")
+        if isinstance(observations, str) and observations.strip():
+            path = Path(observations).expanduser()
+            if not path.is_absolute():
+                calibration["Observations"] = str((cfg_dir / path).resolve())
 
     return config
 
