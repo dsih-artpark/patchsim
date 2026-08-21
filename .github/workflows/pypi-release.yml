@@ -3,7 +3,12 @@ name: Publish to PyPI
 on:
   release:
     types: [published]
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      release_ref:
+        description: Existing release tag ref, for example refs/tags/v0.1.0
+        required: true
+        type: string
 
 
 jobs:
@@ -14,7 +19,9 @@ jobs:
       contents: read
 
     # Only publish on valid version tags
-    if: startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '.')
+    if: >-
+      (github.event_name == 'release' && startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '.')) ||
+      (github.event_name == 'workflow_dispatch' && startsWith(inputs.release_ref, 'refs/tags/v') && contains(inputs.release_ref, '.'))
 
     environment:
       name: pypi
@@ -22,6 +29,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_ref || github.ref }}
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
@@ -32,7 +41,7 @@ jobs:
           python-version-file: .python-version
 
       - name: Sync dependencies (including dev)
-        run: uv sync --extra dev --frozen
+        run: uv sync --extra analysis --extra dev --extra geo --frozen
 
       - name: Lint
         run: uv run --no-sync --frozen ruff check .
