@@ -81,8 +81,10 @@ Advanced Computing division of the University of Virginia [@VenkatramananPatchSi
 That package implements a metapopulation SEIR model and has been applied to seasonal
 influenza vaccine allocation [@Venkatramanan2019] and
 to county-scale influenza forecasting in the United States [@Venkatramanan2021]. The
-approach was subsequently taken up in collaborative modelling work at the Indian
-Institute of Science and applied to foot-and-mouth disease in Indian livestock
+earlier implementation was also used for age- and district-stratified COVID-19 vaccine
+allocation in Karnataka, as documented in a medRxiv preprint [@Adiga2021]. The approach
+was subsequently taken up in collaborative modelling work at the Indian Institute of
+Science and applied to foot-and-mouth disease in Indian livestock
 populations, which is the setting from which the present work grew. Where the earlier
 package provides a fixed SEIR compartmental structure serving a specific forecasting
 application, the framework described here generalises that approach: compartmental
