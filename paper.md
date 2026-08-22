@@ -20,7 +20,7 @@ authors:
 affiliations:
   - index: 1
     name: AI and Robotics Technology Park (ARTPARK), Indian Institute of Science, Bengaluru, India
-date: 16 June 2026
+date: 22 August 2026
 bibliography: paper.bib
 ---
 
@@ -60,7 +60,9 @@ rather than implemented in code. The intended users are epidemiological modeller
 researchers studying spatial disease dynamics, and public health analysts who need to
 rapidly prototype and compare scenarios across spatial configurations and disease
 systems. PatchSim was developed at ARTPARK, IISc, to support active modelling work on
-livestock disease dynamics in India, including foot-and-mouth disease across cattle and
+livestock disease dynamics in India. The current package is used locally for ongoing
+foot-and-mouth disease vaccination-scenario analysis across Karnataka districts,
+replacing an earlier project-specific implementation; the workflow models cattle and
 buffalo populations stratified by age group and species.
 
 # State of the field
@@ -128,6 +130,14 @@ are included in the documentation. This bounded modularity is configuration- and
 API-based; adding a numerical solver still requires Python development. PatchSim is
 released under GPL-3.0.
 
+# AI usage disclosure
+
+GitHub Copilot, OpenAI Codex CLI (GPT-5), and Anthropic Claude Code assisted with code,
+tests, documentation, and copy-editing. CodeRabbit assisted with code review. Model
+versions were not consistently retained for historical work. The authors reviewed,
+edited, tested, and validated all assisted outputs and made the scientific and
+architectural decisions.
+
 # Acknowledgements
 
 The authors thank Prof. Rajesh Sundaresan and Prof. Siva Athreya for their guidance on
@@ -135,6 +145,6 @@ the modelling work from which this framework grew, and Srinivasan Venkatramanan,
 earlier metapopulation modelling work informed the approach taken here. The authors
 also thank the ARTPARK team at the Indian Institute of Science for institutional
 support. This work was supported by the AI and Robotics Technology Park, ARTPARK,
-IISc, Bengaluru.
+IISc, Bengaluru. The authors declare no conflicts of interest.
 
 # References
