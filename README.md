@@ -91,8 +91,8 @@ uv venv
 source .venv/bin/activate
 uv pip install -e .
 
-# For development (with dev dependencies)
-uv pip install -e .[dev]
+# For development: the dev extra includes the test, lint, analysis, and geo dependencies
+uv pip install -e ".[dev]"
 ```
 
 ---
@@ -169,15 +169,28 @@ and the
 
 ---
 
-## Contributing
+## Contributing and support
 
-We welcome contributions!
+- **Report a bug or request a feature.** Open an issue at
+  <https://github.com/dsih-artpark/patchsim/issues>. Include the PatchSim version
+  (`patchsim --version`), the configuration file, the command you ran, and the full
+  error output.
+- **Ask for help.** Open an issue describing your question; a maintainer will add the
+  `question` label. Questions about the configuration format and the mathematical
+  model are answered in the [documentation](https://patchsim.readthedocs.io/) first.
+- **Contribute code or documentation.** Fork the repository, create a branch, make the
+  change with tests, run the checks below, and open a pull request. For a change to the
+  model, solver, or configuration format, open an issue first to discuss the design.
 
-To contribute: fork the repo, create a branch, make your changes, and open a pull request.  
-For major changes, please open an issue first to discuss.
+Run these lint, test, and documentation checks before opening a pull request. CI runs
+the same checks and also builds the package:
 
-Thanks for helping improve the framework!
-
+```bash
+uv run --frozen --extra dev ruff check .
+uv run --frozen --extra dev ruff format --check .
+uv run --frozen --extra dev pytest -q
+uv run --frozen --extra docs sphinx-build -b html docs docs/_build/html -W
+```
 
 ## License
 
