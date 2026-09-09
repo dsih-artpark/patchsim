@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- Multi-patch infection transitions whose rate expression names `beta` now keep every
+  factor of the expression. The coupled flow was previously replaced by
+  `beta * S * lambda`, so a factor such as `(1 - coverage)` was silently dropped. A
+  coupled infection expression that names `I` or `E` now logs a warning, because the
+  flow is multiplied by the infectious pressure as well.
+
 ## [0.1.0] - 2026-08-22
 
 ### Added

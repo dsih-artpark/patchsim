@@ -124,6 +124,9 @@ class CompartmentalModel:
         return rates
 
 
+_INFECTION_TARGETS = frozenset({"I", "E"})
+
+
 class NetworkModel:
     """Network model for multi-patch simulations."""
 
@@ -161,6 +164,24 @@ class NetworkModel:
             for group_idx in range(self.num_groups)
             for c in base_model.compartments
         ]
+        if self.num_patches > 1 or self.groups:
+            self._warn_if_infection_expression_names_infectives()
+
+    def _warn_if_infection_expression_names_infectives(self) -> None:
+        # Under mixing the local flow is multiplied by the infectious pressure, so an
+        # expression that already carries a prevalence term counts it twice.
+        for transition in self.base_model.transitions:
+            source, target = [p.strip() for p in transition["transition"].split("->")]
+            rate = transition.get("rate", "")
+            if source != "S" or target not in _INFECTION_TARGETS or not isinstance(rate, str):
+                continue
+            if any(re.search(rf"\b{re.escape(c)}\b", rate) for c in _INFECTION_TARGETS):
+                logging.getLogger(__name__).warning(
+                    "Infection transition '%s' names an infectious compartment; under patch or "
+                    "group mixing the local flow is also multiplied by the infectious pressure. "
+                    "See docs/rate-multiplication.md.",
+                    transition["transition"],
+                )
 
     def state_key(self, compartment: str, patch_idx: int, group_idx: int = 0) -> str:
         """Return the internal state key for one compartment stratum."""
@@ -202,44 +223,30 @@ class NetworkModel:
             return forces.tolist()
         return forces[:, 0].tolist()
 
+    @staticmethod
     def _adjust_infection_rate(
-        self,
-        patch_params: dict[str, float],
-        original_rate_expr: Any,
         rate: float,
-        patch_state: dict[str, float],
         force_of_infection: float,
         is_infection_transition: bool,
         has_mixing: bool,
     ) -> float:
-        """Adjust infection rate for network-mediated FOI.
+        """Scale an infection flow by the infectious pressure when mixing is active.
+
+        The local flow already carries every factor of the rate expression, including
+        the source compartment, so coupling is a single multiplication.
 
         Args:
-            patch_params: Parameters for the current patch
-            original_rate_expr: Original rate expression from transition definition
-            rate: Computed rate from base model
-            patch_state: Current state for the patch
-            force_of_infection: Force of infection for the current stratum
+            rate: Local flow computed by the base model
+            force_of_infection: Infectious pressure for the current stratum
             is_infection_transition: Whether this is an infection transition
             has_mixing: Whether spatial or group mixing is active
 
         Returns:
-            Adjusted rate incorporating network FOI if applicable
+            The coupled flow for infection transitions under mixing, else the local flow
         """
         if is_infection_transition and has_mixing:
-            # Network case: Apply network FOI (lambdas already computed)
-            # Check if original expression includes beta term
-            beta = patch_params.get("beta", 1.0)
-            if isinstance(original_rate_expr, str) and re.search(r"\bbeta\b", original_rate_expr):
-                # Rate expression includes beta; apply network FOI correction
-                adjusted_rate = beta * patch_state["S"] * force_of_infection
-            else:
-                # Rate is already computed; apply FOI scaling
-                adjusted_rate = rate * force_of_infection if patch_state["S"] > 0 else 0
-        else:
-            # Single patch or non-infection transition: use rate as-is
-            adjusted_rate = rate
-        return adjusted_rate
+            return rate * force_of_infection
+        return rate
 
     def compute_derivatives(self, state: dict[str, float]) -> dict[str, float]:
         """Compute derivatives for all compartments based on transitions, incorporating network-mediated FOI."""
@@ -247,7 +254,7 @@ class NetworkModel:
 
         # Compute network-mediated force of infection for each patch
         lambdas = self.compute_force_of_infection(state)
-        infection_compartments = set(getattr(self, "infection_compartments", {"I", "E"}))
+        infection_compartments = set(getattr(self, "infection_compartments", _INFECTION_TARGETS))
         has_mixing = self.num_patches > 1 or bool(self.groups)
 
         # Process each patch and optional group.
@@ -278,18 +285,9 @@ class NetworkModel:
                     transition_label = transition["transition"]
                     source, target = [p.strip() for p in transition_label.split("->")]
                     rate = rates[transition_label]
-                    original_rate_expr = transition.get("rate", "")
 
                     is_infection_transition = source == "S" and target in infection_compartments
-                    adjusted_rate = self._adjust_infection_rate(
-                        patch_params,
-                        original_rate_expr,
-                        rate,
-                        patch_state,
-                        force,
-                        is_infection_transition,
-                        has_mixing,
-                    )
+                    adjusted_rate = self._adjust_infection_rate(rate, force, is_infection_transition, has_mixing)
 
                     derivatives[self.state_key(source, i, group_idx)] -= adjusted_rate
                     derivatives[self.state_key(target, i, group_idx)] += adjusted_rate
