@@ -70,12 +70,8 @@ lint = [
 ]
 
 dev = [
-    "pytest>=8.3.5",
-    "pytest-cov",
-    "ruff",
-    "mypy",
+    "patchsim[analysis,geo,lint,test]",
     "rich>=13.0.0",
-    "pre-commit>=3.0.0",
     "twine>=7.0.0",
 ]
 
