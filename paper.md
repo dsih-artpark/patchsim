@@ -189,7 +189,7 @@ a mechanistic patch model to the between-district allocation question.
 
 Near-term significance rests on what a third party can install, run, and check. The
 package has been developed in public since April 2025,
-with two tagged releases on PyPI and an archived release record [@patchsim]. Continuous
+with tagged releases on PyPI and an archived release record [@patchsim]. Continuous
 integration runs the automated test suite, linting, and a documentation build on every
 pull request and push to the main branch. The tests cover configuration validation, the
 expression
