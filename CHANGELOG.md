@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-14
+
 ### Fixed
 
 - Multi-patch infection transitions whose rate expression names `beta` now keep every

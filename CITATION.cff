@@ -2,9 +2,13 @@ cff-version: 1.2.0
 message: "If you use PatchSim, please cite the software using this metadata."
 type: software
 title: "PatchSim: a modular simulation framework for patch-based metapopulation epidemiology"
-version: 0.1.0
-doi: 10.5281/zenodo.22051463
-date-released: 2026-08-22
+version: 0.1.1
+# Zenodo mints the version DOI only when the release is published. This field holds the
+# concept DOI until then, and is replaced with the 0.1.1 version DOI immediately after
+# publication. Leaving the concept DOI here permanently would make a citation to 0.1.1
+# resolve to whichever version is archived last.
+doi: 10.5281/zenodo.22051462
+date-released: 2026-09-14
 identifiers:
   - type: doi
     value: 10.5281/zenodo.22051462
